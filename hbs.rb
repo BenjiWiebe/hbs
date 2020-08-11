@@ -55,14 +55,16 @@ class Automate
 			pono: '',
 		}
 		invoices = []
+		page_count = 0
 		loop do
+			page_count += 1
 			print "Getting page of invoices... "
 			next_data, page_invoices = request_posh_page(data, month)
-			data[:searchMode] = 'X' #after the first page use searchMode = X
+			next_data[:searchMode] = 'X' #after the first page use searchMode = X
 			invoices += page_invoices
 			puts "#{page_invoices.count} invoices"
 			if data[:startPos] == next_data[:startPos]
-				puts "Last page"
+				puts "Last page, total #{page_count} pages."
 				break
 			end
 			data = next_data
@@ -73,7 +75,6 @@ class Automate
 	# returns [next startPos, array of invoice numbers]
 	def request_posh_page(posh_post_data, month = '00')
 		@response = nil
-		puts "POSTing startPos = #{posh_post_data[:startPos]}"
 		@response = HTTParty.post(
 			'http://192.168.10.1/netview/in/POSHdata',
 			:body => posh_post_data,
