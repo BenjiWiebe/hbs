@@ -84,9 +84,14 @@ class Automate
 		@posh_body = Nokogiri::HTML(@response.body) {|c| c.noblanks }
 		#puts @response.body
 		#select all POSH records: @posh_body.xpath('//span[@class="oline"]|//span[@class="eline"]')
+		lines = @posh_body.xpath('//span[@class="eline"]|//span[@class="oline"]')
+		poshes = []
+		lines.each do |line|
+			poshes << POSH_entry.new(line)
+		end
 
 		# vvv Returns an array of invoice numbers from this page of POSH records, as text. vvv
-		invoice_numbers = @posh_body.xpath('//span[@class="invno"]').map {|x| x.children.text }
+		#invoice_numbers = @posh_body.xpath('//span[@class="invno"]').map {|x| x.children.text }
 
 
 		#populate posh_post_data for the Next button for pagination
@@ -97,17 +102,51 @@ class Automate
 			next_data.store(inp['name'].to_sym, inp['value'])
 		end
 
-		return [next_data, invoice_numbers]
+		return [next_data, poshes]
+	end
+end
+
+class POSH_entry
+	attr_reader :slsman, :cstdtl, :tikno, :piktik, :invno, :invdte,
+		:amtdtl, :custno, :invdt, :piktyp, :rprog_c, :sig
+
+	#pass nokogiri object of eline/oline to this function
+	def initialize(n)
+		id = n['id'].gsub(/^dtl/, '')
+		@slsman = n.at_css('.slsman').content
+		@cstdtl = n.at_css('.cstdtl').content.to_i
+		@tikno = @piktik = n.at_css('.piktik').content.to_i
+		@invno = n.at_css('.invno').content.to_i
+		@invdte = n.at_css('.invdte').content
+		@amtdtl = n.at_css('.amtdtl').content
+		@custno = n.at_css("#custno#{id}").content.to_i
+		@invdt = n.at_css("#invdt#{id}").content
+		@piktyp = n.at_css("#piktyp#{id}").content
+		@rprog_c = n.at_css("#rprog_c#{id}").content
+		@sig = n.at_css("#sig#{id}").content
+	end
+
+	def get_ticket_preview
+		url = '/netview/in/POSHdisp'
+		request = "GET #{url}?loc1+132259+23675+08032020+15697+20017+user"
+	end
+
+	def delete_ticket_preview
+		timestring = URI::escape(Time.now.strftime("%a %b %d %H:%M:%S %Y"))
+		url='/netview/libx/rmfile'
+		request = "GET #{url}?#{rptPath}+#{timestring}"
+		puts "TODO: #{request}"
 	end
 end
 
 bot = Automate.new
 bot.login
-invoice_list = bot.request_posh
+posh_list = bot.request_posh('08')
 puts "Found #{invoice_list.count} invoices"
+puts invoice_list
 #from results:
 #select span#eline and span#oline
-#custno=&curloc=loc1&startPos=9315520&lastPage=15&searchMode=X&fileAction=bldLST&srchType=d&custname=&month=00&invdate=&year=2020&invno=&ptno=&pono=
-#custno=&curloc=loc1&startPos=9316720&lastPage=15&searchMode=X&fileAction=bldLST&srchType=d&custname=&month=00&invdate=&year=2020&invno=&ptno=&pono=
-#custno=&curloc=loc1&startPos=9317920&lastPage=15&searchMode=X&fileAction=bldLST&srchType=d&custname=&month=00&invdate=&year=2020&invno=&ptno=&pono=
 #
+#
+#GET /netview/in/POSHdisp?loc1+132259+23675+08032020+15697+20017+user
+#GET /netview/libx/rmfile?../../loc1/pikdir/pik15697.out+Wed%20Aug%2012%2010:17:41%202020
