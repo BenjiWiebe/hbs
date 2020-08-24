@@ -158,8 +158,7 @@ class Automate
 				$log.error "Error generating preview!"
 				$log.error "Ticket ##{p.tikno}, Invoice ##{p.invno}"
 				$log.error "HBS error: #{hbs_errmsg['value']}"
-				binding.pry if $DEBUG
-				raise Exception.new
+				raise HBSErrException.new(hbs_errmsg)
 			end
 			close_form = poshdisp.at_xpath('//span/input[@id="rptPath"]/parent::span')
 			rptPath = close_form.at_css('input#rptPath')['value']
@@ -230,8 +229,14 @@ end
 
 class SalesTaxEntry
 	attr_accessor :invno, :amount, :taxamount, :taxable
-	def initialize(posh_entry, invlines)
+	def initialize(posh_entry = nil, invlines = nil)
 		@invno = posh_entry.invno
+		if invlines == nil
+			@amount = BigDecimal("0")
+			@taxamount = BigDecimal("0")
+			@taxable = BigDecimal("0")
+			return
+		end
 		if posh_entry.status == "VOID"
 			$log.info "Invoice ##{posh_entry.invno} is void, setting totals to 0."
 			@amount = BigDecimal("0")
@@ -264,6 +269,9 @@ class Array
 	include ProgressBar::WithProgress
 end
 
+class HBSErrException < Exception
+end
+
 # convert a BigDecimal to a string formatted as dollars
 def bd_to_usd(bd)
 	return "$" + (bd.truncate(2).to_s("F") + "00")[ /.*\..{2}/ ]
@@ -272,14 +280,21 @@ end
 bot = Automate.new
 bot.login
 bot.start_posh
-posh_list = bot.request_posh('07')
+posh_list = bot.request_posh('00', 2019)
 puts "Found #{posh_list.count} invoices"
 puts "Getting all sales tax amounts"
 
 stes = []
 totalsales = BigDecimal("0")
 posh_list.each_with_progress do |poshitem|
-	inv = bot.get_ticket_preview(poshitem)
+	begin
+		inv = bot.get_ticket_preview(poshitem)
+	rescue HBSErrException => e
+		$log.error "HBS Error on invoice ##{poshitem.invno}: #{e.message}"
+		$log.error "Not using taxable amounts"
+		totalsales += SalesTaxEntry.new(poshitem).amount
+		next
+	end
 	ste = SalesTaxEntry.new(poshitem, inv)
 	stes << ste if ste.taxamount != 0
 	totalsales += ste.amount
