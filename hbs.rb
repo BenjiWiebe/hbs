@@ -253,7 +253,7 @@ end
 bot = Automate.new
 bot.login
 bot.start_posh
-posh_list = bot.request_posh('01')
+posh_list = bot.request_posh('07')
 puts "Found #{posh_list.count} invoices"
 puts "Getting all sales tax amounts"
 
@@ -268,13 +268,11 @@ puts "Found #{stes.count} taxable invoices."
 
 total_tax = stes.map {|t| t.taxamount }.sum
 total_amount = stes.map {|t| t.amount }.sum
+taxable_amount = stes.map {|t| t.taxable }.sum
 
 tax_str = bd_to_usd(total_tax)
 amt_str = bd_to_usd(total_amount)
-puts "Total tax: #{tax_str}"
-puts "Total amount: #{amt_str}"
-puts
-puts
+taxamt_str = bd_to_usd(taxable_amount)
 
 rows = []
 stes.each do |s|
@@ -287,5 +285,9 @@ end
 table = Terminal::Table.new :headings => ['Invoice#', 'Amount', 'Taxable', 'Tax'], :rows => rows
 puts table
 
-binding.pry
-a=1
+puts
+puts
+puts "Total tax: #{tax_str}"
+puts "Total amount: #{amt_str}"
+puts "Total taxable: #{taxamt_str}"
+
