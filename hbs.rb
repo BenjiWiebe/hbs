@@ -195,7 +195,7 @@ end
 
 class POSH_entry
 	attr_reader :slsman, :tikno, :piktik, :invno, :invdte,
-		:amtdtl, :custno, :invdt, :piktyp, :rprog_c, :sig
+		:amtdtl, :custno, :invdt, :piktyp, :rprog_c, :sig, :status
 	attr_accessor :sessid
 
 	#pass nokogiri object of eline/oline to this function
@@ -211,6 +211,16 @@ class POSH_entry
 		@piktyp = n.at_css("#piktyp#{id}").content
 		@rprog_c = n.at_css("#rprog_c#{id}").content
 		@sig = n.at_css("#sig#{id}").content
+		@status = n.at_css('.status').content
+		@status.gsub!(/[[:space:]]/, '') # Remove whitespace
+		@status.gsub!(/&nbsp/, '')
+		if @status.length > 0
+			if @status == "VOID"
+				$log.info "Found voided invoice ##{@invno}"
+			else
+				$log.warn "POSH entry has an unknown status of #{@status}"
+			end
+		end
 		if @tikno == 0
 			$log.warn "POSH entry has a tikno of 0"
 		end
@@ -221,6 +231,16 @@ end
 class SalesTaxEntry
 	attr_accessor :invno, :amount, :taxamount, :taxable
 	def initialize(posh_entry, invlines)
+		@invno = posh_entry.invno
+		if posh_entry.status == "VOID"
+			$log.info "Invoice ##{posh_entry.invno} is void, setting totals to 0."
+			@amount = BigDecimal("0")
+			@taxamount = BigDecimal("0")
+			@taxable = BigDecimal("0")
+			return
+		elsif posh_entry.status.length > 0
+			$log.warn "Invoice ##{posh_entry.invno} has unknown status of #{posh_entry.status}"
+		end
 		begin
 			tax=invlines.find {|e| /SALES[[:space:]]TAX/ =~ e }
 			tax = tax[tax.index('X')+1..tax.length] #get substring from after the X of TAX, until end of string
@@ -232,7 +252,6 @@ class SalesTaxEntry
 			@taxamount = BigDecimal(tax) unless tax.nil?
 			@taxable = BigDecimal(taxable) unless taxable.nil?
 			@amount = BigDecimal(posh_entry.amtdtl)
-			@invno = posh_entry.invno
 		rescue Exception => e
 			$log.error "Fatal error finding tax entry in invoice"
 			binding.pry if $DEBUG
@@ -258,10 +277,12 @@ puts "Found #{posh_list.count} invoices"
 puts "Getting all sales tax amounts"
 
 stes = []
+totalsales = BigDecimal("0")
 posh_list.each_with_progress do |poshitem|
 	inv = bot.get_ticket_preview(poshitem)
 	ste = SalesTaxEntry.new(poshitem, inv)
 	stes << ste if ste.taxamount != 0
+	totalsales += ste.amount
 end
 
 puts "Found #{stes.count} taxable invoices."
@@ -273,6 +294,7 @@ taxable_amount = stes.map {|t| t.taxable }.sum
 tax_str = bd_to_usd(total_tax)
 amt_str = bd_to_usd(total_amount)
 taxamt_str = bd_to_usd(taxable_amount)
+totalsales_str = bd_to_usd(totalsales)
 
 rows = []
 stes.each do |s|
@@ -288,6 +310,5 @@ puts table
 puts
 puts
 puts "Total tax: #{tax_str}"
-puts "Total amount: #{amt_str}"
 puts "Total taxable: #{taxamt_str}"
-
+puts "Total sales for the month: #{totalsales_str}"
