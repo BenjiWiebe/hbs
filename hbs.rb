@@ -280,7 +280,7 @@ end
 bot = Automate.new
 bot.login
 bot.start_posh
-posh_list = bot.request_posh('00', 2019)
+posh_list = bot.request_posh('08')
 puts "Found #{posh_list.count} invoices"
 puts "Getting all sales tax amounts"
 
