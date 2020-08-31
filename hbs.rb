@@ -6,21 +6,28 @@ require 'progress_bar'
 require 'logger'
 require 'terminal-table'
 require 'bigdecimal'
+require 'base64'
+require 'yaml'
 
-$DEBUG = true
+$loc = 'loc1'
+$user = 'user'
+$password = 'password'
+$ip = '192.168.10.1'
 
-if $DEBUG
-	require 'pry'
-end
+$DEBUG = $ARGV.delete("--debug") ? true : false
 
 $log = Logger.new(STDOUT)
 $log.level = Logger::WARN
+
+$log.level = Logger::INFO if $ARGV.delete("--verbose")
+
+require 'pry' if $DEBUG
 
 class Automate
 	attr_accessor :headers
 	attr_accessor :cookies
 	attr_reader :response
-	HBSIP = '192.168.10.1'
+	HBSIP = $ip
 	HBSURL = "http://#{HBSIP}"
 	def initialize
 		@cookies = HTTParty::CookieHash.new
@@ -31,7 +38,7 @@ class Automate
 	def login
 		@response = HTTParty.post(
 			"#{HBSURL}/netview/libx/HOME",
-			:body => {login: 'user', passwd: 'password'},
+			:body => {login: $user, passwd: $password},
 			:headers => @headers,
 			:follow_redirects => false
 		)
@@ -55,7 +62,7 @@ class Automate
 
 	def start_posh
 		@response = HTTParty.get(
-			"#{HBSURL}/netview/in/POSH?loc1+user+",
+			"#{HBSURL}/netview/in/POSH?#{$loc}+#{$user}+",
 			:headers => @headers,
 			:follow_redirects => false
 		)
@@ -69,7 +76,7 @@ class Automate
 	def request_posh(month = '00', year = '2020')
 		data = {
 			custno: '',
-			curloc: 'loc1',
+			curloc: $loc,
 			startPos: 0,
 			lastPage: '0',
 			searchMode: 'N',
@@ -144,7 +151,7 @@ class Automate
 
 	# Returns array of invoice lines
 	def get_ticket_preview(p)
-		url = "#{HBSURL}/netview/in/POSHdisp?loc1+#{p.tikno}+#{p.custno}+#{p.invdt}+#{@poshpid}+#{p.invno}+user"
+		url = "#{HBSURL}/netview/in/POSHdisp?#{$loc}+#{p.tikno}+#{p.custno}+#{p.invdt}+#{@poshpid}+#{p.invno}+#{$user}"
 		$log.info "Using GET: #{url}"
 		@response = HTTParty.get(
 			url,
