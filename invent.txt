@@ -1,0 +1,6 @@
+to get part # D-3524:
+
+POST /netview/in/b64invent
+<curloc>loc1</curloc><userid>user</userid><partnum>068045051053050052</partnum><vendor>800</vendor><type>N</type>
+
+
