@@ -9,17 +9,24 @@ require 'bigdecimal'
 require 'base64'
 require 'yaml'
 
-$loc = 'loc1'
-$user = 'user'
-$password = 'password'
-$ip = '192.168.10.1'
-
 $DEBUG = $ARGV.delete("--debug") ? true : false
 
 $log = Logger.new(STDOUT)
 $log.level = Logger::WARN
-
 $log.level = Logger::INFO if $ARGV.delete("--verbose")
+
+cfgfile = 'hbs.config'
+cfg = YAML.load(File.open(cfgfile).read)
+$loc = cfg["loc"].nil? ? "loc1" : cfg["loc"]
+$user = cfg["user"]
+$password = cfg["password"]
+$ip = cfg["ip"].nil? ? '192.168.10.1' : cfg["ip"]
+
+if $user.nil? || $password.nil?
+	$log.error "Username and password are required."
+	exit 1
+end
+$password = Base64.decode64($password)
 
 require 'pry' if $DEBUG
 
@@ -27,8 +34,7 @@ class Automate
 	attr_accessor :headers
 	attr_accessor :cookies
 	attr_reader :response
-	HBSIP = $ip
-	HBSURL = "http://#{HBSIP}"
+	HBSURL = "http://#{$ip}"
 	def initialize
 		@cookies = HTTParty::CookieHash.new
 		@headers = {}

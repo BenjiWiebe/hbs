@@ -1,0 +1,11 @@
+# IP address of HBS NetView server
+ip: 192.168.10.1
+
+# Location
+loc: loc1
+
+# Base64-encoded password
+password: cGFzc3dvcmQ=
+
+# User
+user: username
