@@ -11,6 +11,9 @@ require 'yaml'
 
 require_relative 'lib.rb'
 
+puts "WARNING: Use WARRANTY line when existing!"
+puts "Invoice #20883"
+exit 1
 $DEBUG = $ARGV.delete("--debug") ? true : false
 
 $log = Logger.new(STDOUT)
