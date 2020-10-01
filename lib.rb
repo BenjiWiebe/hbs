@@ -160,7 +160,7 @@ class Automate
 	end
 
 	def delete_ticket_preview(rptPath)
-		timestring = URI::escape(Time.now.strftime("%a %b %d %H:%M:%S %Y"))
+		timestring = URI::encode_www_form_component(Time.now.strftime("%a %b %d %H:%M:%S %Y"))
 		url = "#{@hbsurl}/netview/libx/rmfile?#{rptPath}+#{timestring}"
 		@response = HTTParty.get(
 			url,
