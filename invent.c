@@ -13,13 +13,23 @@ struct invent_entry {
 	char bin_alt2[13]; // length 12, offset 97
 };
 char record[ENTRY_SIZE];
-int main()
+int main(int argc, char *argv[])
 {
+	char *filename = "INVENT";
+	if(argc > 1)
+	{
+		if(!strcmp(argv[1], "--help")||argc > 2)
+		{
+			printf("Usage: %s [filename]\n", argv[0]);
+			return 0;
+		}
+		filename = argv[1];
+	}
 	// first entry at 2048 bytes
-	FILE *fp = fopen("INVENT", "rb");
+	FILE *fp = fopen(filename, "rb");
 	if(fp == NULL)
 	{
-		printf("Error opening INVENT: %s\n", strerror(errno));
+		printf("Error opening %s: %s\n", filename, strerror(errno));
 		return 1;
 	}
 	fseek(fp, FIRST_ENTRY_OFFSET, SEEK_SET);
