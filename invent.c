@@ -4,26 +4,57 @@
 #include <fcntl.h>
 #include <string.h>
 #include <sys/types.h>
+#include <getopt.h>
+
 #define FIRST_ENTRY_OFFSET	2048
 #define ENTRY_SIZE		2048
 struct invent_entry {
-	char part_number[9]; // length 8, offset 0
+	char part_number[11]; // length 10, offset 0
 	char bin_location[13]; // length 12, offset 73
 	char bin_alt1[13]; // length 12, offset 85
 	char bin_alt2[13]; // length 12, offset 97
 };
 char record[ENTRY_SIZE];
+
+void print_usage(char *argv0)
+{
+	printf("Usage: %s [filename]\n", argv0);
+}
+
 int main(int argc, char *argv[])
 {
 	char *filename = "INVENT";
-	if(argc > 1)
+	char *to_find = NULL;
+	struct option long_options[] =
 	{
-		if(!strcmp(argv[1], "--help")||argc > 2)
+		{"help",	no_argument,		0,	'h'},
+		{"find",	required_argument,	0,	'f'},
+		{0,0,0,0}
+	};
+	int option_index = 0;
+	int c;
+	while(1)
+	{
+		c = getopt_long(argc, argv, "hf:", long_options, &option_index);
+		if(c == -1)
+			break;
+		switch(c)
 		{
-			printf("Usage: %s [filename]\n", argv[0]);
-			return 0;
+			case 'h':
+				print_usage(argv[0]);
+				return 0;
+			case 'f':
+				to_find = optarg;
 		}
-		filename = argv[1];
+	}
+	if(optind < argc)
+	{
+		filename = argv[optind++];
+	}
+	if(optind < argc)
+	{
+		print_usage(argv[0]);
+		return 0;
 	}
 	// first entry at 2048 bytes
 	FILE *fp = fopen(filename, "rb");
@@ -65,8 +96,9 @@ int main(int argc, char *argv[])
 			// blank entries in DB?
 			continue;
 		}
-		//printf("%d: %s\n", pos, record);
-		printf("%s\n", entry.bin_location);
+		if(to_find && strcmp(entry.part_number, to_find))
+			continue;
+		printf("%s: %s\n", entry.part_number, entry.bin_location);
 	}
 	fclose(fp);
 	return 0;
