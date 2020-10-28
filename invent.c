@@ -9,10 +9,12 @@
 #define FIRST_ENTRY_OFFSET	2048
 #define ENTRY_SIZE		2048
 struct invent_entry {
-	char part_number[11]; // length 10, offset 0
+	char part_number[21]; // length 20, offset 0
+	char desc[11]; //length 11, offset 58
 	char bin_location[13]; // length 12, offset 73
 	char bin_alt1[13]; // length 12, offset 85
 	char bin_alt2[13]; // length 12, offset 97
+	char entry_date[9]; // length 8, offset 148
 };
 char record[ENTRY_SIZE];
 
@@ -83,9 +85,11 @@ int main(int argc, char *argv[])
 		}
 		#define entry_copy(field, record) do{memcpy((field), record, sizeof(field)-1);(field)[sizeof(field)-1]='\0';}while(0)
 		entry_copy(entry.part_number, record);
+		entry_copy(entry.desc, record+58);
 		entry_copy(entry.bin_location, record+73);
 		entry_copy(entry.bin_alt1, record+85);
 		entry_copy(entry.bin_alt2, record+97);
+		entry_copy(entry.entry_date, record+148);
 		if(record[0]=='\xFF')
 		{
 			// seems to be deleted records
