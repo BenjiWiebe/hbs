@@ -54,6 +54,10 @@ posh_list.each_with_progress do |poshitem|
 		totalsales += SalesTaxEntry.new(poshitem).amount
 		next
 	end
+#	results = inv.select {|line| line =~ /SEARCH TERM/}
+#	if results.length > 0
+#		puts "Found #{poshitem.invno}"
+#	end
 	ste = SalesTaxEntry.new(poshitem, inv)
 	stes << ste if ste.taxamount != 0
 	totalsales += ste.amount
