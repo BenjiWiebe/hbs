@@ -7,7 +7,6 @@ require 'logger'
 require 'terminal-table'
 require 'bigdecimal'
 require 'base64'
-require 'yaml'
 
 require_relative 'lib.rb'
 
@@ -24,22 +23,16 @@ def bd_to_usd(bd)
 	return "$" + (bd.truncate(2).to_s("F") + "00")[ /.*\..{2}/ ]
 end
 
-cfgfile = 'hbs.config'
-cfg = YAML.load(File.open(cfgfile).read)
-loc = cfg["loc"].nil? ? "loc1" : cfg["loc"]
-user = cfg["user"]
-password = cfg["password"]
-ip = cfg["ip"].nil? ? '192.168.10.1' : cfg["ip"]
-
-if user.nil? || password.nil?
+$config = HBSConfig.new('hbs.config')
+if $config.user.nil? || $config.password.nil?
 	$log.error "Username and password are required."
 	exit 1
 end
 
-bot = Automate.new(user, Base64.decode64(password), ip, loc)
+bot = Automate.new($config.user, Base64.decode64($config.password), $config.ip, $config.loc)
 bot.login
 bot.start_posh
-posh_list = bot.request_posh('09')
+posh_list = bot.request_posh('10')
 puts "Found #{posh_list.count} invoices"
 puts "Getting all sales tax amounts"
 

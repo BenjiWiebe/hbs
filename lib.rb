@@ -1,3 +1,21 @@
+require 'yaml'
+require 'httparty'
+require 'nokogiri'
+class HBSConfig
+	attr_reader :loc, :cfgfile, :user, :password, :ip
+	def initialize(cfgfile)
+		@cfgfile = 'hbs.config'
+		cfg = YAML.load(File.open(cfgfile).read)
+		@loc = cfg["loc"].nil? ? "loc1" : cfg["loc"]
+		@user = cfg["user"]
+		@password = cfg["password"]
+		@ip = cfg["ip"]
+		if @ip == nil
+			raise "IP cannot be blank"
+		end
+	end
+end
+
 class Automate
 	attr_accessor :headers
 	attr_accessor :cookies
@@ -120,7 +138,7 @@ class Automate
 		form_inputs = @posh_body.xpath('//form[@id="main"]/input')
 		next_data = {}
 		form_inputs.each do |inp|
-			#map 'em to a hash for posh_post_data and return it for next calll
+			#map 'em to a hash for posh_post_data and return it for next call
 			next_data.store(inp['name'].to_sym, inp['value'])
 		end
 
@@ -242,6 +260,19 @@ class SalesTaxEntry
 			@taxamount = BigDecimal(tax) unless tax.nil?
 			@taxable = BigDecimal(taxable) unless taxable.nil?
 			@amount = BigDecimal(posh_entry.amtdtl)
+
+			# Find INTERNAL amounts and subtract from total
+			internal=invlines.find {|e| /^[[:space:]]+INTERNAL/ =~ e }
+			if internal =~ /^[[:space:]]+.*Amt:[[:space:]]*([0-9\.]+)/
+				internal_amt = BigDecimal($1)
+				$log.info "Found INTERNAL invoice, amount = #{internal_amt}"
+				$internals = BigDecimal("0.00") if $internals.nil?
+				$internals = $internals + internal_amt
+				@amount = @amount - internal_amt
+				puts "Found INTERNAL invoice, amount = #{internal_amt}, tally = #{$internals}"
+				@amount = 0 if @amount < 0
+			end
+
 		rescue Exception => e
 			$log.error "Fatal error finding tax entry in invoice"
 			binding.pry if $DEBUG
