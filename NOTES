@@ -1,0 +1,6 @@
+POST to /netview/in/PIdata to get all PI (I) data
+
+partnum=051052088049049050071082053&vendor=800&type=1&curloc=loc1&err=&prntprice=NYNNNY&nxtprv=&prtsrch=&typsrch=&lastsrch=&dfltsv=800&useCoreFac=Y&favgcst=0
+
+
+Damerau-Levenshtein distance for fuzzy matching
