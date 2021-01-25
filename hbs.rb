@@ -10,6 +10,11 @@ require 'base64'
 
 require_relative 'lib.rb'
 
+MONTH='01'
+YEAR='2021'
+SEARCH_TERM=nil
+#SEARCH_TERM=/searchterm/
+
 $DEBUG = $ARGV.delete("--debug") ? true : false
 
 $log = Logger.new(STDOUT)
@@ -32,7 +37,7 @@ end
 bot = Automate.new($config.user, Base64.decode64($config.password), $config.ip, $config.loc)
 bot.login
 bot.start_posh
-posh_list = bot.request_posh('10')
+posh_list = bot.request_posh(MONTH, YEAR)
 puts "Found #{posh_list.count} invoices"
 puts "Getting all sales tax amounts"
 
@@ -47,10 +52,12 @@ posh_list.each_with_progress do |poshitem|
 		totalsales += SalesTaxEntry.new(poshitem).amount
 		next
 	end
-#	results = inv.select {|line| line =~ /SEARCH TERM/}
-#	if results.length > 0
-#		puts "Found #{poshitem.invno}"
-#	end
+	if SEARCH_TERM
+		results = inv.select {|line| line =~ SEARCH_TERM }
+		if results.length > 0
+			puts "Found invoice ##{poshitem.invno} matching #{SEARCH_TERM.inspect}"
+		end
+	end
 	ste = SalesTaxEntry.new(poshitem, inv)
 	stes << ste if ste.taxamount != 0
 	totalsales += ste.amount
