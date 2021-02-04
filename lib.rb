@@ -69,7 +69,7 @@ class Automate
 
 	# returns array of POSH_entry's for the month
 	# use month code 00 to get a year's worth
-	def request_posh(month = '00', year = '2020')
+	def request_posh(month = '00', year)
 		data = {
 			custno: '',
 			curloc: @loc,
