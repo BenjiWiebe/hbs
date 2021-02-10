@@ -11,14 +11,28 @@
 
 #define FIRST_ENTRY_OFFSET	2048
 #define ENTRY_SIZE		2048
+struct padded_double {
+	unsigned char padding[6];
+	double value;
+} __attribute__((packed));
 struct invent_entry {
 	char part_number[21]; // length 20, offset 0
-	char desc[11]; //length 11, offset 58
+	char status[2]; // length 1, offset 52. A=Active, O=Obsolete
+	char vendor[4]; // length 3, offset 30
+	char supplier[4]; // length 3, offset 53
+	char mfrid[6]; // length 6, offset 36
+	char desc[11]; //length 10, offset 58
 	char bin_location[13]; // length 12, offset 73
 	char bin_alt1[13]; // length 12, offset 85
 	char bin_alt2[13]; // length 12, offset 97
 	char entry_date[9]; // length 8, offset 148
 	char ext_desc[61]; // length 60, offset 1556
+	// offset starts at 298, length sizeof(double). 
+	// offset increments by 14
+	struct padded_double month_history[48]; // 48 months of sales history
+	// offset starts at 970
+	// offset increments by 14
+	struct padded_double year_history[9]; // 9 years of sale history
 };
 
 struct hbsdb_file_def {
@@ -43,6 +57,10 @@ char record[ENTRY_SIZE];
 void print_usage(char *argv0)
 {
 	printf("Usage: %s [filename]\n", argv0);
+	printf("  -h,--help          Print this message.\n");
+	printf("  -f,--find <partno> Find information for <partno>.\n");
+	printf("  -a,--all           Print information for all parts.\n");
+	printf("  -r,--regex         Interpret <partno> as regex.\n");
 }
 
 void print_entry(struct invent_entry *entry)
@@ -52,8 +70,44 @@ void print_entry(struct invent_entry *entry)
 		printf("%s\n", entry->desc);
 	if(strlen(entry->ext_desc) >0)
 		printf("%s\n", entry->ext_desc);
+	for(int i = 0; i < sizeof(entry->month_history) / sizeof(struct padded_double); i++)
+	{
+		printf("Month %d: %f\n", i, entry->month_history[i].value);
+	}
+	for(int i = 0; i < sizeof(entry->year_history) / sizeof(struct padded_double); i++)
+	{
+		printf("Year %d: %f\n", i, entry->year_history[i].value);
+	}
 	printf("\n");
 }
+
+/*
+{
+  "results": [
+    {
+      "partnumber": "4HC",
+      "bin": "A1-01",
+      "desc": "hose clamp",
+      "extdesc": "small hose clamp",
+      "note1": null,
+      "note2": null
+    }
+  ]
+}
+*/
+/*void print_entry_json(struct invent_entry *entry)
+{
+	const char *null = "null";
+	printf("{");
+	printf("\"partnumber\":\"%s\",", entry->part_number);
+	printf("\"bin\":\"%s\",", strlen(entry->bin_location) ? entry->bin_location : null);
+	printf("\"binalt1\":\"%s\",", strlen(entry->bin_alt1) ? entry->bin_alt1 : null);
+	printf("\"binalt2\":\"%s\",", strlen(entry->bin_alt2) ? entry->bin_alt2 : null);
+	printf("\"desc\":\"%s\",", strlen(entry->desc) ? entry->desc : null);
+	printf("\"extdesc\":\"%s\",", strlen(entry->ext_desc) ? entry->ext_desc : null);
+	printf("\"note1\":\"%s\",", strlen(entry->);
+	printf("\"note2\":\"%s\",");
+}*/
 
 int main(int argc, char *argv[])
 {
@@ -100,7 +154,9 @@ int main(int argc, char *argv[])
 	{
 		filename = argv[optind++];
 	}
-	if(optind < argc)
+	
+	// If >1 files supplied, print usage information.
+	if(optind > argc)
 	{
 		print_usage(argv[0]);
 		return 0;
@@ -145,14 +201,6 @@ int main(int argc, char *argv[])
 			printf("fgets failed: %s\n", strerror(errno));
 			return 1;
 		}
-		#define entry_copy(field, record) do{memcpy((field), record, sizeof(field)-1);(field)[sizeof(field)-1]='\0';}while(0)
-		entry_copy(entry.part_number, record);
-		entry_copy(entry.desc, record+58);
-		entry_copy(entry.bin_location, record+73);
-		entry_copy(entry.bin_alt1, record+85);
-		entry_copy(entry.bin_alt2, record+97);
-		entry_copy(entry.entry_date, record+148);
-		entry_copy(entry.ext_desc, record+1556);
 		if(record[0]=='\xFF')
 		{
 			// seems to be deleted records
@@ -163,6 +211,22 @@ int main(int argc, char *argv[])
 			// blank entries in DB?
 			continue;
 		}
+		#define entry_copy(field, record) do{memcpy((field), record, sizeof(field)-1);(field)[sizeof(field)-1]='\0';}while(0)
+		#define entry_copy_nonull(field, record) do{memcpy((field), record, sizeof(field));}while(0)
+		//record+offset in bytes
+		entry_copy(entry.part_number, record); //20?
+		entry_copy(entry.vendor, record+30); //3
+		entry_copy(entry.mfrid, record+36); //5
+		entry_copy(entry.desc, record+58); //10?
+		entry_copy(entry.bin_location, record+73); //12?
+		entry_copy(entry.bin_alt1, record+85); //12
+		entry_copy(entry.bin_alt2, record+97); //12
+		entry_copy(entry.entry_date, record+148); //8
+		entry_copy(entry.ext_desc, record+1556); //60
+		//entry_copy_nonull(entry.month_history, record+298);
+		memcpy(entry.month_history, record+298, 672); //298?
+		//entry_copy_nonull(entry.year_history, record+970);
+		memcpy(entry.year_history, record+970, 126);
 		if(to_find)
 		{
 			if(!strcmp(entry.part_number, to_find))
