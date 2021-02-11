@@ -11,6 +11,8 @@
 
 #define FIRST_ENTRY_OFFSET	2048
 #define ENTRY_SIZE		2048
+
+// If something goes wrong on an architecture other than x86/x86_64 or with a non-GCC compiler, refactor the code to just copy the double in a loop rather than doing fancy un-portable packed struct memcpy's.
 struct padded_double {
 	unsigned char padding[6];
 	double value;
@@ -223,10 +225,9 @@ int main(int argc, char *argv[])
 		entry_copy(entry.bin_alt2, record+97); //12
 		entry_copy(entry.entry_date, record+148); //8
 		entry_copy(entry.ext_desc, record+1556); //60
-		//entry_copy_nonull(entry.month_history, record+298);
-		memcpy(entry.month_history, record+298, 672); //298?
-		//entry_copy_nonull(entry.year_history, record+970);
-		memcpy(entry.year_history, record+970, 126);
+		// If you've got a wierd bug with the month_history/year_history arrays getting corrupted, check the comment at the definition of struct padded_double. Packed structs aren't portable.
+		entry_copy_nonull(entry.month_history, record+298);
+		entry_copy_nonull(entry.year_history, record+970);
 		if(to_find)
 		{
 			if(!strcmp(entry.part_number, to_find))
