@@ -3,8 +3,10 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/types.h>
 #include <getopt.h>
+#include <time.h>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
@@ -20,6 +22,13 @@ struct padded_double {
 struct invent_entry {
 	char part_number[21]; // length 20, offset 0
 	char status[2]; // length 1, offset 52. A=Active, O=Obsolete
+	double price; // length 8, offset 188. price in cents
+	int price_dollars;
+	int price_cents;
+	double cost; // length 8, offset 180, manufacturer cost in cents
+	int cost_dollars;
+	int cost_cents;
+	double on_hand; //length 8, offset 458.
 	char vendor[4]; // length 3, offset 30
 	char supplier[4]; // length 3, offset 53
 	char mfrid[6]; // length 6, offset 36
@@ -67,19 +76,30 @@ void print_usage(char *argv0)
 
 void print_entry(struct invent_entry *entry)
 {
-	printf("%s: %s\n", entry->part_number, entry->bin_location);
+/*	static int this_month = 12;
+	static int this_year = 0;
+	const char *months[] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+	if(this_month == 12)
+	{
+		time_t now_epoch = time(NULL);
+		struct tm *now = localtime(&now_epoch);
+		this_month = now->tm_mon;
+		this_year = now->tm_year + 1900;
+	}*/
+	printf("%s: %s%s$%d.%02d - %.2f on hand\n", entry->part_number, entry->bin_location, entry->bin_location[0] ? ", " : "", entry->price_dollars, entry->price_cents, entry->on_hand);
 	if(strlen(entry->desc) > 0)
 		printf("%s\n", entry->desc);
 	if(strlen(entry->ext_desc) >0)
 		printf("%s\n", entry->ext_desc);
+	/* Don't print all this history on the plain text output. Plus it doesn't correctly show the month/year.
 	for(int i = 0; i < sizeof(entry->month_history) / sizeof(struct padded_double); i++)
 	{
-		printf("Month %d: %f\n", i, entry->month_history[i].value);
+		printf("%s %d: %.2f\n", months[i % 12 + this_month], this_year - i / 12, entry->month_history[i].value);
 	}
 	for(int i = 0; i < sizeof(entry->year_history) / sizeof(struct padded_double); i++)
 	{
-		printf("Year %d: %f\n", i, entry->year_history[i].value);
-	}
+		printf("%d: %.2f\n", this_year - i, entry->year_history[i].value);
+	}*/
 	printf("\n");
 }
 
@@ -228,9 +248,16 @@ int main(int argc, char *argv[])
 		// If you've got a wierd bug with the month_history/year_history arrays getting corrupted, check the comment at the definition of struct padded_double. Packed structs aren't portable.
 		entry_copy_nonull(entry.month_history, record+298);
 		entry_copy_nonull(entry.year_history, record+970);
+		memcpy(&entry.on_hand, record+1112, sizeof(entry.on_hand));
+		memcpy(&entry.price, record+188, sizeof(entry.price));
+		memcpy(&entry.cost, record+153, sizeof(entry.cost));
+		entry.price_dollars = (int)entry.price / 100;
+		entry.price_cents = (int)entry.price % 100;
+		entry.cost_dollars = (int)entry.cost / 100;
+		entry.cost_cents = (int)entry.cost % 100;
 		if(to_find)
 		{
-			if(!strcmp(entry.part_number, to_find))
+			if(!strcasecmp(entry.part_number, to_find))
 			{
 				print_entry(&entry);
 				continue;
