@@ -7,12 +7,18 @@
 #include <sys/types.h>
 #include <getopt.h>
 #include <time.h>
+#include <stdbool.h>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
-#define FIRST_ENTRY_OFFSET	2048
-#define ENTRY_SIZE		2048
+#include "normalize.h"
+
+#define INVENT_FIRST_ENTRY_OFFSET	2048
+#define INVENT_ENTRY_SIZE		2048
+
+#define INVDESC_FIRST_ENTRY_OFFSET	512
+#define INVDESC_ENTRY_SIZE		512
 
 // If something goes wrong on an architecture other than x86/x86_64 or with a non-GCC compiler, refactor the code to just copy the double in a loop rather than doing fancy un-portable packed struct memcpy's.
 struct padded_double {
@@ -44,34 +50,18 @@ struct invent_entry {
 	// offset starts at 970
 	// offset increments by 14
 	struct padded_double year_history[9]; // 9 years of sale history
+	bool has_comments;
 };
 
-struct hbsdb_file_def {
-	int record_size;
-	int first_record_offset;
-	char *filename;
-};
-struct hbsdb_file_def invdesc = {
-	.record_size = 512,
-	.first_record_offset = 512,
-	.filename = "INVDESC"
-};
-
-struct invdesc_entry {
-	#if 1
-	#endif
-	char part_number[21]; // length 20, offset 0
-	char comment1[15]; // length TODO, offset 44
-};
-char record[ENTRY_SIZE];
+char record[INVENT_ENTRY_SIZE];
 
 void print_usage(char *argv0)
 {
 	printf("Usage: %s [filename]\n", argv0);
-	printf("  -h,--help          Print this message.\n");
-	printf("  -f,--find <partno> Find information for <partno>.\n");
-	printf("  -a,--all           Print information for all parts.\n");
-	printf("  -r,--regex         Interpret <partno> as regex.\n");
+	printf("  -h,--help            Print this message.\n");
+	printf("  -f,--find <partno>   Find information for <partno>.\n");
+	printf("  -a,--all             Print information for all parts.\n");
+	printf("  -r,--regex <pattern> Find parts matching <pattern>.\n");
 }
 
 void print_entry(struct invent_entry *entry)
@@ -135,6 +125,7 @@ int main(int argc, char *argv[])
 {
 	char *filename = "INVENT";
 	char *to_find = NULL;
+	char *pattern_to_find = NULL;
 	struct option long_options[] =
 	{
 		{"help",	no_argument,		0,	'h'},
@@ -150,10 +141,10 @@ int main(int argc, char *argv[])
 	int errorcode = 0;
 	PCRE2_SIZE erroroffset = 0;
 	int ret = 0;
-	int do_regex = 0;
+	bool found_some_results = false;
 	while(1)
 	{
-		c = getopt_long(argc, argv, "hf:ar", long_options, &option_index);
+		c = getopt_long(argc, argv, "hf:ar:", long_options, &option_index);
 		if(c == -1)
 			break;
 		switch(c)
@@ -163,12 +154,13 @@ int main(int argc, char *argv[])
 				return 0;
 			case 'f':
 				to_find = optarg;
+				normalize_part_number(to_find);
 				break;
 			case 'a':
 				print_all_flag = 1;
 				break;
 			case 'r':
-				do_regex = 1;
+				pattern_to_find = optarg;
 				break;
 		}
 	}
@@ -178,17 +170,18 @@ int main(int argc, char *argv[])
 	}
 	
 	// If >1 files supplied, print usage information.
-	if(optind > argc)
+	// *OR* if we have no pattern or part number to find, and we aren't printing all
+	if(optind > argc || (!pattern_to_find && !to_find && !print_all_flag))
 	{
 		print_usage(argv[0]);
 		return 0;
 	}
 	
-	if(do_regex)
+	if(pattern_to_find)
 	{
 		// If we have a regex, compile it and check for errors
 		// case-insensitive
-		regex = pcre2_compile((PCRE2_SPTR)to_find, PCRE2_ZERO_TERMINATED, PCRE2_CASELESS, &errorcode, &erroroffset, NULL);
+		regex = pcre2_compile((PCRE2_SPTR)pattern_to_find, PCRE2_ZERO_TERMINATED, PCRE2_CASELESS, &errorcode, &erroroffset, NULL);
 		if(regex == NULL)
 		{
 			PCRE2_UCHAR buffer[256];
@@ -205,18 +198,16 @@ int main(int argc, char *argv[])
 		printf("Error opening %s: %s\n", filename, strerror(errno));
 		return 1;
 	}
-	fseek(fp, FIRST_ENTRY_OFFSET, SEEK_SET);
-	if(ftell(fp) != FIRST_ENTRY_OFFSET)
+	fseek(fp, INVENT_FIRST_ENTRY_OFFSET, SEEK_SET);
+	if(ftell(fp) != INVENT_FIRST_ENTRY_OFFSET)
 	{
 		printf("fseek failed: %s\n", strerror(errno));
 		return 1;
 	}
 	while(1)
 	{
-		// part number is 8 chars long max
 		struct invent_entry entry = {0};
-		int pos = ftell(fp);
-		if(!fread(record, ENTRY_SIZE, 1, fp))
+		if(!fread(record, INVENT_ENTRY_SIZE, 1, fp))
 		{
 			if(feof(fp))
 				break;
@@ -250,31 +241,51 @@ int main(int argc, char *argv[])
 		entry_copy_nonull(entry.year_history, record+970);
 		memcpy(&entry.on_hand, record+1112, sizeof(entry.on_hand));
 		memcpy(&entry.price, record+188, sizeof(entry.price));
-		memcpy(&entry.cost, record+153, sizeof(entry.cost));
+		memcpy(&entry.cost, record+180, sizeof(entry.cost));
 		entry.price_dollars = (int)entry.price / 100;
 		entry.price_cents = (int)entry.price % 100;
 		entry.cost_dollars = (int)entry.cost / 100;
 		entry.cost_cents = (int)entry.cost % 100;
+		entry.has_comments = false;
+		if(record[1616] == 'Y')
+		{
+			entry.has_comments = true;
+		}
+
+		if(print_all_flag)
+		{
+			found_some_results = true;
+			printf("%s\n", entry.part_number);
+			continue;
+		}
+
 		if(to_find)
 		{
-			if(!strcasecmp(entry.part_number, to_find))
+			char tmp[sizeof(((struct invent_entry*)0)->part_number)];
+			strcpy(tmp, entry.part_number);
+			normalize_part_number(tmp);
+			if(!strcasecmp(tmp, to_find))
 			{
+				found_some_results = true;
 				print_entry(&entry);
 				continue;
 			}
 		}
-		if(to_find && regex)
+		if(pattern_to_find)
 		{
 			pcre2_match_data *matchdata;
 			matchdata = pcre2_match_data_create_from_pattern(regex, NULL);
 			ret = pcre2_match(regex, (PCRE2_SPTR)entry.part_number, PCRE2_ZERO_TERMINATED, 0, 0, matchdata, NULL);
 			if(ret > 0)
 			{
+				found_some_results = true;
 				print_entry(&entry);
 			}
 		}
-		if(print_all_flag)
-			printf("%s\n", entry.part_number);
+	}
+	if(!found_some_results)
+	{
+		printf("No matches found.\n");
 	}
 	fclose(fp);
 	return 0;

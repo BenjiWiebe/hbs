@@ -7,8 +7,6 @@
 </form>
 <pre>
 <?php
-$REGEX_STIHL = "/\d{4}[- ]*\d{3}[- ]*\d{4}/";
-$REGEX_STIHL_BAR = "/\d{4}[- ]*\d{4}/";
 $SHPATH="/home/benji/find_part.sh";
 function get_part($part) {
 	$p=escapeshellarg($part);
@@ -16,7 +14,6 @@ function get_part($part) {
 	system("${SHPATH} ${p}");
 }
 $rq=$_REQUEST["part"];
-//if(preg_match($REGEX_STIHL, $rq))
 if(strlen($rq))
 {
 	get_part($rq);

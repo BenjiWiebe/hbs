@@ -2,3 +2,12 @@ check for tax amounts on trade ins
 warn on negative tax amounts
 dont count INTERNAL invoices, check 12/2020 numbers, there was an INTERNAL then
 dont add negative amounts to total sales for the month
+
+
+
+
+
+for invent.c:
+add JSON output
+allow multiple -f's per run. malloc() an array for all optargs, maximum 64? sorted? binary search?
+read from INVDESC
