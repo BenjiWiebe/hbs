@@ -2,3 +2,5 @@ hbs.config
 INVENT
 invent.o
 invent
+globtest
+globtest.o
