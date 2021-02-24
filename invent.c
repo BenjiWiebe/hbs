@@ -20,6 +20,9 @@
 #define INVDESC_FIRST_ENTRY_OFFSET	512
 #define INVDESC_ENTRY_SIZE		512
 
+// Maximum number of -f <partno> to store from the command line
+#define MAX_PART_NUMBERS	64
+
 // If something goes wrong on an architecture other than x86/x86_64 or with a non-GCC compiler, refactor the code to just copy the double in a loop rather than doing fancy un-portable packed struct memcpy's.
 struct padded_double {
 	unsigned char padding[6];
@@ -142,6 +145,8 @@ int main(int argc, char *argv[])
 	PCRE2_SIZE erroroffset = 0;
 	int ret = 0;
 	bool found_some_results = false;
+	char part_numbers[MAX_PART_NUMBERS][sizeof(((struct invent_entry*)0)->part_number)] = {0};
+	int part_numbers_idx = 0;
 	while(1)
 	{
 		c = getopt_long(argc, argv, "hf:ar:", long_options, &option_index);
@@ -155,6 +160,7 @@ int main(int argc, char *argv[])
 			case 'f':
 				to_find = optarg;
 				normalize_part_number(to_find);
+				strcpy(part_numbers[part_numbers_idx++], to_find);
 				break;
 			case 'a':
 				print_all_flag = 1;
@@ -256,22 +262,22 @@ int main(int argc, char *argv[])
 		{
 			found_some_results = true;
 			printf("%s\n", entry.part_number);
-			continue;
 		}
-
-		if(to_find)
+		else if(to_find)
 		{
 			char tmp[sizeof(((struct invent_entry*)0)->part_number)];
 			strcpy(tmp, entry.part_number);
 			normalize_part_number(tmp);
-			if(!strcasecmp(tmp, to_find))
+			for(int i = 0; part_numbers[i][0] != 0; i++)
 			{
-				found_some_results = true;
-				print_entry(&entry);
-				continue;
+				if(!strcasecmp(tmp, part_numbers[i]))
+				{
+					found_some_results = true;
+					print_entry(&entry);
+				}
 			}
 		}
-		if(pattern_to_find)
+		else if(pattern_to_find)
 		{
 			pcre2_match_data *matchdata;
 			matchdata = pcre2_match_data_create_from_pattern(regex, NULL);
