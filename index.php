@@ -9,6 +9,12 @@
 <?php
 $SHPATH="/home/benji/find_part.sh";
 function get_part($part) {
+//	if($part[0] != '/' && strpos($part, '*') !== false) {
+//		print "processed ${part} to ";
+//		$part2 = '/' . substr_replace('*', '.*', $part);
+//		print "${part2}\n";
+//		exit;
+//	}
 	$p=escapeshellarg($part);
 	global $SHPATH;
 	system("${SHPATH} ${p}");

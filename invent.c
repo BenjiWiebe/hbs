@@ -23,6 +23,9 @@
 // Maximum number of -f <partno> to store from the command line
 #define MAX_PART_NUMBERS	64
 
+#define MONTH_HIST_LEN	48
+#define YEAR_HIST_LEN	9
+
 // If something goes wrong on an architecture other than x86/x86_64 or with a non-GCC compiler, refactor the code to just copy the double in a loop rather than doing fancy un-portable packed struct memcpy's.
 struct padded_double {
 	unsigned char padding[6];
@@ -49,11 +52,13 @@ struct invent_entry {
 	char ext_desc[61]; // length 60, offset 1556
 	// offset starts at 298, length sizeof(double). 
 	// offset increments by 14
-	struct padded_double month_history[48]; // 48 months of sales history
+	struct padded_double month_history[MONTH_HIST_LEN]; // 48 months of sales history
 	// offset starts at 970
 	// offset increments by 14
-	struct padded_double year_history[9]; // 9 years of sale history
+	struct padded_double year_history[YEAR_HIST_LEN]; // 9 years of sale history
 	bool has_comments;
+	char note1[1];
+	char note2[1];
 };
 
 char record[INVENT_ENTRY_SIZE];
@@ -65,6 +70,7 @@ void print_usage(char *argv0)
 	printf("  -f,--find <partno>   Find information for <partno>.\n");
 	printf("  -a,--all             Print information for all parts.\n");
 	printf("  -r,--regex <pattern> Find parts matching <pattern>.\n");
+	printf("  -j,--json            Print information as JSON.\n");
 }
 
 void print_entry(struct invent_entry *entry)
@@ -110,19 +116,41 @@ void print_entry(struct invent_entry *entry)
   ]
 }
 */
-/*void print_entry_json(struct invent_entry *entry)
+void print_value_null(char *value)
 {
-	const char *null = "null";
+	if(value && strlen(value) > 0)
+		printf("\"%s\"", value);
+	else
+		printf("null");
+}
+void print_entry_json(struct invent_entry *entry)
+{
 	printf("{");
-	printf("\"partnumber\":\"%s\",", entry->part_number);
-	printf("\"bin\":\"%s\",", strlen(entry->bin_location) ? entry->bin_location : null);
-	printf("\"binalt1\":\"%s\",", strlen(entry->bin_alt1) ? entry->bin_alt1 : null);
-	printf("\"binalt2\":\"%s\",", strlen(entry->bin_alt2) ? entry->bin_alt2 : null);
-	printf("\"desc\":\"%s\",", strlen(entry->desc) ? entry->desc : null);
-	printf("\"extdesc\":\"%s\",", strlen(entry->ext_desc) ? entry->ext_desc : null);
-	printf("\"note1\":\"%s\",", strlen(entry->);
-	printf("\"note2\":\"%s\",");
-}*/
+	printf("\"partnumber\":\"%s\"", entry->part_number);
+	printf(",\"bin\":");
+	print_value_null(entry->bin_location);
+	printf(",\"binalt1\":");
+	print_value_null(entry->bin_alt1);
+	printf(",\"binalt2\":");
+	print_value_null(entry->bin_alt2);
+	printf(",\"desc\":");
+	print_value_null(entry->desc);
+	printf(",\"extdesc\":");
+	print_value_null(entry->ext_desc);
+	printf(",\"note1\":");
+	print_value_null(entry->note1);
+	printf(",\"note2\":");
+	print_value_null(entry->note2);
+	printf(",\"histmonth\":[");
+	for(int i = 0; i < MONTH_HIST_LEN - 1; i++) // Subtract 1 so we have an element left...
+		printf("%0.2f,", entry->month_history[i].value);
+	printf("%0.2f]", entry->month_history[MONTH_HIST_LEN-1].value); // ...which we print without a comma
+	printf(",\"histyear\":[");
+	for(int i = 0; i < YEAR_HIST_LEN - 1; i++)
+		printf("%0.2f,", entry->year_history[i].value);
+	printf("%0.2f]", entry->year_history[YEAR_HIST_LEN-1].value);
+	printf("}\n");
+}
 
 int main(int argc, char *argv[])
 {
@@ -139,7 +167,7 @@ int main(int argc, char *argv[])
 	};
 	int option_index = 0;
 	int c;
-	int print_all_flag = 0;
+	int print_all_flag = 0, print_as_json = 0;
 	pcre2_code *regex = NULL;
 	int errorcode = 0;
 	PCRE2_SIZE erroroffset = 0;
@@ -149,7 +177,7 @@ int main(int argc, char *argv[])
 	int part_numbers_idx = 0;
 	while(1)
 	{
-		c = getopt_long(argc, argv, "hf:ar:", long_options, &option_index);
+		c = getopt_long(argc, argv, "jhf:ar:", long_options, &option_index);
 		if(c == -1)
 			break;
 		switch(c)
@@ -161,6 +189,9 @@ int main(int argc, char *argv[])
 				to_find = optarg;
 				normalize_part_number(to_find);
 				strcpy(part_numbers[part_numbers_idx++], to_find);
+				break;
+			case 'j':
+				print_as_json = 1;
 				break;
 			case 'a':
 				print_all_flag = 1;
@@ -273,7 +304,9 @@ int main(int argc, char *argv[])
 				if(!strcasecmp(tmp, part_numbers[i]))
 				{
 					found_some_results = true;
-					print_entry(&entry);
+					print_as_json ?
+						print_entry_json(&entry) :
+						print_entry(&entry);
 				}
 			}
 		}
