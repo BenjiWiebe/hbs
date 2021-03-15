@@ -48,7 +48,7 @@ char *json_stringify(char *input)
 	out[outi++] = '"';
 	for(size_t i = 0; input[i] != 0; i++)
 	{
-		if(input[i] == '\'' || input[i] == '"')
+		if(input[i] == '\\' || input[i] == '"')
 		{
 			out[outi++] = '\\';
 			out[outi++] = input[i];
