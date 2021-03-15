@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html><head><meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Inventory lookup</title></head>
 <body>
-<form action="/json.php" method="get">
+<form action="/" method="get">
 <label for="part">Part number:</label>
 <input type="text" name="part"></input>
 </form>
@@ -42,10 +42,10 @@ function print_results_as_text($results) {
 		print intdiv($result->price, 100) . '.';
 		printf("%02d", $result->price % 100);
 		print " - " . $result->onhand . " on hand";
-		print "\n";	
-		if(count($entry->desc) == 0)
+		print "\n";
+		if(!empty($result->desc))
 			print $result->desc . "\n";
-		if(count($entry->extdesc) == 0)
+		if(!empty($result->extdesc))
 			print $result->extdesc . "\n";
 		print "\n";
 	}
