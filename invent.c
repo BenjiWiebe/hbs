@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
 		{"help",	no_argument,		0,	'h'},
 		{"find",	required_argument,	0,	'f'},
 		{"all",		no_argument,		0,	'a'},
-		{"regex",	no_argument,		0,	'r'},
+		{"regex",	required_argument,	0,	'r'},
 		{"json",	no_argument,		0,	'j'},
 		{0,0,0,0}
 	};
