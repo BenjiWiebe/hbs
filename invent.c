@@ -8,11 +8,13 @@
 #include <getopt.h>
 #include <time.h>
 #include <stdbool.h>
+#include <math.h>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
 #include "normalize.h"
+#include "json_stringify.h"
 
 #define INVENT_FIRST_ENTRY_OFFSET	2048
 #define INVENT_ENTRY_SIZE		2048
@@ -34,12 +36,8 @@ struct padded_double {
 struct invent_entry {
 	char part_number[21]; // length 20, offset 0
 	char status[2]; // length 1, offset 52. A=Active, O=Obsolete
-	double price; // length 8, offset 188. price in cents
-	int price_dollars;
-	int price_cents;
-	double cost; // length 8, offset 180, manufacturer cost in cents
-	int cost_dollars;
-	int cost_cents;
+	int price; // length 8, offset 188. price in cents
+	int cost; // length 8, offset 180, manufacturer cost in cents
 	double on_hand; //length 8, offset 458.
 	char vendor[4]; // length 3, offset 30
 	char supplier[4]; // length 3, offset 53
@@ -75,47 +73,15 @@ void print_usage(char *argv0)
 
 void print_entry(struct invent_entry *entry)
 {
-/*	static int this_month = 12;
-	static int this_year = 0;
-	const char *months[] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
-	if(this_month == 12)
-	{
-		time_t now_epoch = time(NULL);
-		struct tm *now = localtime(&now_epoch);
-		this_month = now->tm_mon;
-		this_year = now->tm_year + 1900;
-	}*/
-	printf("%s: %s%s$%d.%02d - %.2f on hand\n", entry->part_number, entry->bin_location, entry->bin_location[0] ? ", " : "", entry->price_dollars, entry->price_cents, entry->on_hand);
+	printf("%s: %s%s$%d.%02d - %.2f on hand\n", entry->part_number, entry->bin_location,
+		entry->bin_location[0] ? ", " : "", entry->price / 100, entry->price % 100, entry->on_hand);
 	if(strlen(entry->desc) > 0)
 		printf("%s\n", entry->desc);
 	if(strlen(entry->ext_desc) >0)
 		printf("%s\n", entry->ext_desc);
-	/* Don't print all this history on the plain text output. Plus it doesn't correctly show the month/year.
-	for(int i = 0; i < sizeof(entry->month_history) / sizeof(struct padded_double); i++)
-	{
-		printf("%s %d: %.2f\n", months[i % 12 + this_month], this_year - i / 12, entry->month_history[i].value);
-	}
-	for(int i = 0; i < sizeof(entry->year_history) / sizeof(struct padded_double); i++)
-	{
-		printf("%d: %.2f\n", this_year - i, entry->year_history[i].value);
-	}*/
 	printf("\n");
 }
 
-/*
-{
-  "results": [
-    {
-      "partnumber": "4HC",
-      "bin": "A1-01",
-      "desc": "hose clamp",
-      "extdesc": "small hose clamp",
-      "note1": null,
-      "note2": null
-    }
-  ]
-}
-*/
 void print_value_null(char *value)
 {
 	if(value && strlen(value) > 0)
@@ -126,21 +92,16 @@ void print_value_null(char *value)
 void print_entry_json(struct invent_entry *entry)
 {
 	printf("{");
-	printf("\"partnumber\":\"%s\"", entry->part_number);
-	printf(",\"bin\":");
-	print_value_null(entry->bin_location);
-	printf(",\"binalt1\":");
-	print_value_null(entry->bin_alt1);
-	printf(",\"binalt2\":");
-	print_value_null(entry->bin_alt2);
-	printf(",\"desc\":");
-	print_value_null(entry->desc);
-	printf(",\"extdesc\":");
-	print_value_null(entry->ext_desc);
-	printf(",\"note1\":");
-	print_value_null(entry->note1);
-	printf(",\"note2\":");
-	print_value_null(entry->note2);
+	printf("\"partnumber\":%s", json_stringify(entry->part_number));
+	printf(",\"price\":%d", (int)entry->price);
+	printf(",\"onhand\":%0.2f", entry->on_hand);
+	printf(",\"bin\":%s", json_stringify(entry->bin_location));
+	printf(",\"binalt1\":%s",json_stringify(entry->bin_alt1));
+	printf(",\"binalt2\":%s",json_stringify(entry->bin_alt2));
+	printf(",\"desc\":%s",json_stringify(entry->desc));
+	printf(",\"extdesc\":%s",json_stringify(entry->ext_desc));
+	printf(",\"note1\":%s",json_stringify(entry->note1));
+	printf(",\"note2\":%s",json_stringify(entry->note2));
 	printf(",\"histmonth\":[");
 	for(int i = 0; i < MONTH_HIST_LEN - 1; i++) // Subtract 1 so we have an element left...
 		printf("%0.2f,", entry->month_history[i].value);
@@ -163,6 +124,7 @@ int main(int argc, char *argv[])
 		{"find",	required_argument,	0,	'f'},
 		{"all",		no_argument,		0,	'a'},
 		{"regex",	no_argument,		0,	'r'},
+		{"json",	no_argument,		0,	'j'},
 		{0,0,0,0}
 	};
 	int option_index = 0;
@@ -241,6 +203,10 @@ int main(int argc, char *argv[])
 		printf("fseek failed: %s\n", strerror(errno));
 		return 1;
 	}
+	if(print_as_json)
+	{
+		printf("[");
+	}
 	while(1)
 	{
 		struct invent_entry entry = {0};
@@ -277,12 +243,11 @@ int main(int argc, char *argv[])
 		entry_copy_nonull(entry.month_history, record+298);
 		entry_copy_nonull(entry.year_history, record+970);
 		memcpy(&entry.on_hand, record+1112, sizeof(entry.on_hand));
-		memcpy(&entry.price, record+188, sizeof(entry.price));
-		memcpy(&entry.cost, record+180, sizeof(entry.cost));
-		entry.price_dollars = (int)entry.price / 100;
-		entry.price_cents = (int)entry.price % 100;
-		entry.cost_dollars = (int)entry.cost / 100;
-		entry.cost_cents = (int)entry.cost % 100;
+		double dprice = 0, dcost = 0;
+		memcpy(&dprice, record+188, sizeof(dprice));
+		memcpy(&dcost, record+180, sizeof(dcost));
+		entry.price = (int)nearbyint(dprice);
+		entry.cost = (int)nearbyint(dcost);
 		entry.has_comments = false;
 		if(record[1616] == 'Y')
 		{
@@ -303,10 +268,17 @@ int main(int argc, char *argv[])
 			{
 				if(!strcasecmp(tmp, part_numbers[i]))
 				{
-					found_some_results = true;
-					print_as_json ?
-						print_entry_json(&entry) :
+					if(print_as_json) // If JSON output...
+					{
+						if(found_some_results) // ... and this isn't the first result,
+							printf(","); // do some comma separating of records
+						print_entry_json(&entry);
+					}
+					else
+					{
 						print_entry(&entry);
+					}
+					found_some_results = true;
 				}
 			}
 		}
@@ -317,15 +289,24 @@ int main(int argc, char *argv[])
 			ret = pcre2_match(regex, (PCRE2_SPTR)entry.part_number, PCRE2_ZERO_TERMINATED, 0, 0, matchdata, NULL);
 			if(ret > 0)
 			{
+				if(print_as_json)
+				{
+					if(found_some_results)
+						printf(","); // print a separating comma before all records but the first
+					print_entry_json(&entry);
+				}
+				else
+				{
+					print_entry(&entry);
+				}
 				found_some_results = true;
-				print_entry(&entry);
 			}
 		}
 	}
-	if(!found_some_results)
-	{
+	if(print_as_json)
+		printf("]\n");
+	else if(!found_some_results)
 		printf("No matches found.\n");
-	}
 	fclose(fp);
 	return 0;
 }

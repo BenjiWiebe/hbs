@@ -37,8 +37,8 @@ char *json_stringify(char *input)
 	size_t inlen = strlen(input);
 	if(inlen > len)
 	{
-		free(out);
 		len = inlen * 6 * 3;
+		free(out);
 		out = malloc(len);
 		if(!out)
 			return NULL;
@@ -68,20 +68,15 @@ char *json_stringify(char *input)
 		}
 	}
 	out[outi++] = '"';
+	out[outi++] = 0;
 	return out;
 }
 
-#ifdef STANDALONE_TEST
-int main()
+void json_stringify_free(void)
 {
-	char *escaped = json_stringify("'\"\x00");
-	if(!escaped)
+	if(out)
 	{
-		printf("malloc failed\n");
-		return 1;
+		free(out);
+		out = NULL;
 	}
-	printf("%s\n", escaped);
-	free(escaped);
-	return 0;
 }
-#endif
