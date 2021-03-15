@@ -9,6 +9,3 @@ invent.o: invent.c
 
 json_stringify.o: json_stringify.c
 
-globtest: globtest.o
-
-globtest.o: globtest.c
