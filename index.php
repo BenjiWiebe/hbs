@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html><head><meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Inventory lookup</title></head>
+<html><head><meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="stylesheet" href="index.css" /><title>Inventory lookup</title></head>
 <body>
 <form action="/" method="get">
 <label for="part">Part number:</label>
-<input type="text" name="part"></input>
+<input type="search" id="search" name="part" autofocus></input>
 </form>
-<pre>
 <?php
-$EXEPATH="/home/benji/hbs/invent";
+$EXEPATH="/home/benji/hbs/invent --search-desc --search-extdesc";
 $FILEPATH="/home/benji/INVENT";
+require('text.php');
+require('table.php');
 function find_results($part, $is_regex = false) {
 	$p=escapeshellarg($part);
 	global $EXEPATH;
@@ -24,31 +25,11 @@ function find_results($part, $is_regex = false) {
 	$cmd = "${EXEPATH} --json ${opt} '${part}' ${FILEPATH}";
 	$txt = shell_exec($cmd);
 	$j = json_decode($txt);
-	if($j == null) {
+	if($j === null) {
 		echo $txt;
 		throw new DomainException("Invalid JSON result");
 	}
 	return $j;
-}
-function print_results_as_text($results) {
-	foreach($results as $result) {
-		print $result->partnumber;
-		print ": ";
-		if($result->bin) {
-			print $result->bin;
-			print ", ";
-		}
-		print "$";
-		print intdiv($result->price, 100) . '.';
-		printf("%02d", $result->price % 100);
-		print " - " . $result->onhand . " on hand";
-		print "\n";
-		if(!empty($result->desc))
-			print $result->desc . "\n";
-		if(!empty($result->extdesc))
-			print $result->extdesc . "\n";
-		print "\n";
-	}
 }
 $rq=$_REQUEST["part"];
 if(strlen($rq))
@@ -61,7 +42,7 @@ if(strlen($rq))
 			$j = find_results($rq);
 		}
 		if(count($j)) {
-			print_results_as_text($j);
+			print_results_as_table($j);
 		} else {
 			echo "No results found.";
 		}
@@ -71,6 +52,5 @@ if(strlen($rq))
 }
 
 ?>
-</pre>
 </body>
 </html>
