@@ -68,6 +68,8 @@ void print_usage(char *argv0)
 	printf("  -f,--find <partno>   Find information for <partno>.\n");
 	printf("  -a,--all             Print information for all parts.\n");
 	printf("  -r,--regex <pattern> Find parts matching <pattern>.\n");
+	printf("     --search-desc     Check description against regex.\n");
+	printf("     --search-extdesc  Check extended description against regex.\n");
 	printf("  -j,--json            Print information as JSON.\n");
 }
 
@@ -118,6 +120,7 @@ int main(int argc, char *argv[])
 	char *filename = "INVENT";
 	char *to_find = NULL;
 	char *pattern_to_find = NULL;
+	int search_desc=0,search_ext_desc=0,search_part_number=1;
 	struct option long_options[] =
 	{
 		{"help",	no_argument,		0,	'h'},
@@ -125,6 +128,8 @@ int main(int argc, char *argv[])
 		{"all",		no_argument,		0,	'a'},
 		{"regex",	required_argument,	0,	'r'},
 		{"json",	no_argument,		0,	'j'},
+		{"search-desc",no_argument,		&search_desc, 1},
+		{"search-extdesc",no_argument,	&search_ext_desc, 1},
 		{0,0,0,0}
 	};
 	int option_index = 0;
@@ -286,7 +291,12 @@ int main(int argc, char *argv[])
 		{
 			pcre2_match_data *matchdata;
 			matchdata = pcre2_match_data_create_from_pattern(regex, NULL);
-			ret = pcre2_match(regex, (PCRE2_SPTR)entry.part_number, PCRE2_ZERO_TERMINATED, 0, 0, matchdata, NULL);
+			if(search_part_number)
+				ret = pcre2_match(regex, (PCRE2_SPTR)entry.part_number, PCRE2_ZERO_TERMINATED, 0, 0, matchdata, NULL);
+			if(search_desc && ret < 0)
+				ret = pcre2_match(regex, (PCRE2_SPTR)entry.desc, PCRE2_ZERO_TERMINATED, 0, 0, matchdata, NULL);
+			if(search_ext_desc && ret < 0)
+				ret = pcre2_match(regex, (PCRE2_SPTR)entry.ext_desc, PCRE2_ZERO_TERMINATED, 0, 0, matchdata, NULL);
 			if(ret > 0)
 			{
 				if(print_as_json)
