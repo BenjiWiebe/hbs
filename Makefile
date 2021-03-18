@@ -9,3 +9,5 @@ invent.o: invent.c
 
 json_stringify.o: json_stringify.c
 
+clean:
+	-rm -f *.o invent
