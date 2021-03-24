@@ -6,7 +6,7 @@
 <input type="search" id="search" name="part" autofocus></input>
 </form>
 <?php
-$EXEPATH="/home/benji/hbs/invent --search-desc --search-extdesc";
+$EXEPATH="/home/benji/invent --search-desc --search-extdesc";
 $FILEPATH="/home/benji/INVENT";
 require('text.php');
 require('table.php');
