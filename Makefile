@@ -11,3 +11,8 @@ json_stringify.o: json_stringify.c
 
 clean:
 	-rm -f *.o invent
+
+install: invent
+	@echo 'Installing to ~/'
+	-cp invent ~/
+
