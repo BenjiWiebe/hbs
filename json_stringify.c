@@ -23,18 +23,18 @@ char *json_stringify(char *input)
 		if(!out)
 			return NULL;
 	}
+	size_t inlen = strlen(input);
 	if(out == NULL)
 	{
 		// * 6 + 3 gives us space to encode everything as \uXXXX,
-		// plus space for the terminating NULL and quotation marks.
+		// plus space for the terminating NULL (1) and quotation marks (2).
 		// it prevents us from
 		// having to do lots of fancy realloc()s part way through.
-		len = strlen(input) * 6 + 3; // Overkill, but simplifies things
+		len = inlen * 6 + 3; // Overkill, but simplifies things
 		out = malloc(len);
 		if(!out)
 			return NULL;
 	}
-	size_t inlen = strlen(input);
 	if(inlen > len)
 	{
 		len = inlen * 6 * 3;
