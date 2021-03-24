@@ -1,6 +1,6 @@
 CFLAGS=-g
 
-all: invent
+all: invent vendupd
 
 invent: LDLIBS=-lpcre2-8 -lm
 invent: invent.o json_stringify.o
