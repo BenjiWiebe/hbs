@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+#include <stdlib.h>
 
 int main()
 {
@@ -34,21 +35,35 @@ int main()
 	const int record_size = 2048;
 	size_t idx = record_size; // Skip the first record; it isn't real.
 	const int source_offset = 53;
+	const int vendor_offset = 30;
 	const int source_len = 3;
-	// TODO If source is greater than 800 (not equal), set vendor = 800
+	const int vendor_len = 3;
+	char *ptr = map;
+	// If source is greater than or equal to 800, and vendor is 8xx, set vendor = 800
 	do
 	{
-		if(!strncmp(map+idx+source_offset, "840", 3))
+		char source[4], vendor[4];
+		memcpy(source, ptr+source_offset, source_len);
+		memcpy(vendor, ptr+vendor_offset, vendor_len);
+		source[3] = vendor[3] = 0;
+		int sourcei = atoi(source);
+		int vendori = atoi(vendor);
+		if(sourcei >= 800 && sourcei < 900 && vendori > 800 && vendori < 900)
 		{
+			if(ptr[0] == '\xFF')
+			{
+				ptr += record_size;
+				continue;
+			}
 			char partno[21];
-			memcpy(partno, map+idx, 20);
+			strncpy(partno, ptr, 20);
 			partno[20] = 0;
-			printf("Found one with 840: %s\n", partno);
-			*(map+idx+0) = '8';
-			*(map+idx+1) = '0';
-			*(map+idx+2) = '0';
+			printf("Found one with source %d, vendor %d: %s\n", sourcei, vendori, partno);
+			(ptr+vendor_offset)[0] = '8';
+			(ptr+vendor_offset)[1] = '0';
+			(ptr+vendor_offset)[2] = '0';
 		}
-		idx += record_size;
-	} while(idx < s.st_size);
+		ptr += record_size;
+	} while(ptr < s.st_size + map);
 	return 0;
 }
