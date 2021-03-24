@@ -91,28 +91,58 @@ void print_value_null(char *value)
 	else
 		printf("null");
 }
+
+void print_double_two(double d)
+{
+	if(d == 0.0 || d == 1.0 || d == 2.0 || d == 3.0 || d == 4.0 ||
+		d == 5.0 || d == 6.0 || d == 7.0 || d == 8.0 || d == 9.0)
+	{
+		putchar('0' + (int)d);
+	}
+/*	if(d == 0.0)
+		putchar('0');
+	else if(d == 1.0)
+		putchar('1');
+	else if(d == 2.0)
+		putchar('2');
+	else if(d == 3.0)
+		putchar('3');*/
+//	if(d - (int)d == 0)
+//		printf("%d", (int)d);
+	else
+		printf("%0.2f", d);
+}
+
 void print_entry_json(struct invent_entry *entry)
 {
-	printf("{");
-	printf("\"partnumber\":%s", json_stringify(entry->part_number));
+	puts("{");
+	puts("\"partnumber\":"); puts(json_stringify(entry->part_number));
 	printf(",\"price\":%d", (int)entry->price);
-	printf(",\"onhand\":%0.2f", entry->on_hand);
-	printf(",\"bin\":%s", json_stringify(entry->bin_location));
-	printf(",\"binalt1\":%s",json_stringify(entry->bin_alt1));
-	printf(",\"binalt2\":%s",json_stringify(entry->bin_alt2));
-	printf(",\"desc\":%s",json_stringify(entry->desc));
-	printf(",\"extdesc\":%s",json_stringify(entry->ext_desc));
-	printf(",\"note1\":%s",json_stringify(entry->note1));
-	printf(",\"note2\":%s",json_stringify(entry->note2));
-	printf(",\"histmonth\":[");
+	puts(",\"onhand\":"); print_double_two(entry->on_hand);
+	puts(",\"bin\":"); puts(json_stringify(entry->bin_location));
+	puts(",\"binalt1\":"); puts(json_stringify(entry->bin_alt1));
+	puts(",\"binalt2\":"); puts(json_stringify(entry->bin_alt2));
+	puts(",\"desc\":"); puts(json_stringify(entry->desc));
+	puts(",\"extdesc\":"); puts(json_stringify(entry->ext_desc));
+	puts(",\"note1\":"); puts(json_stringify(entry->note1));
+	puts(",\"note2\":"); puts(json_stringify(entry->note2));
+	puts(",\"histmonth\":[");
 	for(int i = 0; i < MONTH_HIST_LEN - 1; i++) // Subtract 1 so we have an element left...
-		printf("%0.2f,", entry->month_history[i].value);
-	printf("%0.2f]", entry->month_history[MONTH_HIST_LEN-1].value); // ...which we print without a comma
-	printf(",\"histyear\":[");
+	{
+		print_double_two(entry->month_history[i].value);
+		putchar(',');
+	}
+	print_double_two(entry->month_history[MONTH_HIST_LEN-1].value);
+	putchar(']'); // ...which we print without a comma
+	puts(",\"histyear\":[");
 	for(int i = 0; i < YEAR_HIST_LEN - 1; i++)
-		printf("%0.2f,", entry->year_history[i].value);
-	printf("%0.2f]", entry->year_history[YEAR_HIST_LEN-1].value);
-	printf("}\n");
+	{
+		print_double_two(entry->year_history[i].value);
+		putchar(',');
+	}
+	print_double_two(entry->year_history[YEAR_HIST_LEN-1].value);
+	putchar(']');
+	puts("}\n");
 }
 
 int main(int argc, char *argv[])
