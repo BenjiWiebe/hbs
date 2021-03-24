@@ -4,3 +4,6 @@ partnum=051052088049049050071082053&vendor=800&type=1&curloc=loc1&err=&prntprice
 
 
 Damerau-Levenshtein distance for fuzzy matching
+
+
+Adding a new part number touches INVENT, INVENT.IDX, TRANSACT, and TRANSACT.IDX
