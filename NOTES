@@ -12,3 +12,6 @@ Adding a new part number touches INVENT, INVENT.IDX, TRANSACT, and TRANSACT.IDX
 
 TODO: Change arguments of invent so that the search term (vendor, regex, or part number) is the only nonoption argument, and the file is passed in as an argument (-f for file probably).
 Also, prevent nonsensical combinations of options.
+
+
+TODO: Sort results before displaying!!
