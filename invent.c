@@ -64,13 +64,14 @@ char record[INVENT_ENTRY_SIZE];
 void print_usage(char *argv0)
 {
 	printf("Usage: %s [filename]\n", argv0);
-	printf("  -h,--help            Print this message.\n");
-	printf("  -f,--find <partno>   Find information for <partno>.\n");
-	printf("  -a,--all             Print information for all parts.\n");
-	printf("  -r,--regex <pattern> Find parts matching <pattern>.\n");
-	printf("     --search-desc     Check description against regex.\n");
-	printf("     --search-extdesc  Check extended description against regex.\n");
-	printf("  -j,--json            Print information as JSON.\n");
+	printf("  -h,--help             Print this message.\n");
+	printf("  -f,--find <partno>    Find information for <partno>.\n");
+	printf("  -a,--all              Print information for all parts.\n");
+	printf("  -r,--regex <pattern>  Find parts matching <pattern>.\n");
+	printf("     --search-desc      Check description against regex.\n");
+	printf("     --search-extdesc   Check extended description against regex.\n");
+	printf("     --match-vendor <v> Return parts that have a vendor of <v>.\n");
+	printf("  -j,--json             Print information as JSON.\n");
 }
 
 void print_entry(struct invent_entry *entry)
@@ -160,6 +161,7 @@ int main(int argc, char *argv[])
 		{"json",	no_argument,		0,	'j'},
 		{"search-desc",no_argument,		&search_desc, 1},
 		{"search-extdesc",no_argument,	&search_ext_desc, 1},
+		{"match-vendor",required_argument, 0, 'v'},
 		{0,0,0,0}
 	};
 	int option_index = 0;
@@ -170,6 +172,7 @@ int main(int argc, char *argv[])
 	PCRE2_SIZE erroroffset = 0;
 	int ret = 0;
 	bool found_some_results = false;
+	char *match_vendor = NULL;
 	char part_numbers[MAX_PART_NUMBERS][sizeof(((struct invent_entry*)0)->part_number)] = {0};
 	int part_numbers_idx = 0;
 	while(1)
@@ -196,6 +199,9 @@ int main(int argc, char *argv[])
 			case 'r':
 				pattern_to_find = optarg;
 				break;
+			case 'v':
+				match_vendor = optarg;
+				break;
 		}
 	}
 	if(optind < argc)
@@ -205,7 +211,7 @@ int main(int argc, char *argv[])
 	
 	// If >1 files supplied, print usage information.
 	// *OR* if we have no pattern or part number to find, and we aren't printing all
-	if(optind > argc || (!pattern_to_find && !to_find && !print_all_flag))
+	if(optind > argc || (!pattern_to_find && !to_find && !print_all_flag && !match_vendor))
 	{
 		print_usage(argv[0]);
 		return 0;
@@ -289,10 +295,14 @@ int main(int argc, char *argv[])
 			entry.has_comments = true;
 		}
 
+		bool i_match = false;
 		if(print_all_flag)
 		{
-			found_some_results = true;
-			printf("%s\n", entry.part_number);
+			i_match = true;
+		}
+		else if(match_vendor && !strncmp(match_vendor, entry.vendor, 3))
+		{
+			i_match = true;
 		}
 		else if(to_find)
 		{
@@ -302,19 +312,7 @@ int main(int argc, char *argv[])
 			for(int i = 0; part_numbers[i][0] != 0; i++)
 			{
 				if(!strcasecmp(tmp, part_numbers[i]))
-				{
-					if(print_as_json) // If JSON output...
-					{
-						if(found_some_results) // ... and this isn't the first result,
-							printf(","); // do some comma separating of records
-						print_entry_json(&entry);
-					}
-					else
-					{
-						print_entry(&entry);
-					}
-					found_some_results = true;
-				}
+					i_match = true;
 			}
 		}
 		else if(pattern_to_find)
@@ -328,19 +326,21 @@ int main(int argc, char *argv[])
 			if(search_ext_desc && ret < 0)
 				ret = pcre2_match(regex, (PCRE2_SPTR)entry.ext_desc, PCRE2_ZERO_TERMINATED, 0, 0, matchdata, NULL);
 			if(ret > 0)
+				i_match = true;
+		}
+		if(i_match)
+		{
+			if(print_as_json) // If JSON output...
 			{
-				if(print_as_json)
-				{
-					if(found_some_results)
-						printf(","); // print a separating comma before all records but the first
-					print_entry_json(&entry);
-				}
-				else
-				{
-					print_entry(&entry);
-				}
-				found_some_results = true;
+				if(found_some_results) // ... and this isn't the first result,
+					printf(","); // do some comma separating of records
+				print_entry_json(&entry);
 			}
+			else
+			{
+				print_entry(&entry);
+			}
+			found_some_results = true; // Don't set this to true too soon, or we will print a leading comma in our JSON array!!
 		}
 	}
 	if(print_as_json)
