@@ -52,6 +52,7 @@ function find_results($part, $search_by, $is_regex = false) {
 		echo $txt;
 		throw new DomainException("Invalid JSON result");
 	}
+	usort($j, fn($a,$b) => strcmp($a->partnumber, $b->partnumber));
 	return $j;
 }
 
