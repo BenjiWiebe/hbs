@@ -67,7 +67,10 @@ if(strlen($rq))
 		} else {
 			$j = find_results($rq, $search_by);
 		}
-		if(count($j)) {
+		$c = count($j);
+		if($c) {
+			if($c > 1)
+				print '<a>' . $c . ' results found.</a>';
 			print_results_as_table($j);
 		} else {
 			echo "No results found.";
