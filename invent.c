@@ -99,6 +99,13 @@ void print_double_two(double d)
 		d == 5.0 || d == 6.0 || d == 7.0 || d == 8.0 || d == 9.0)
 	{
 		putchar('0' + (int)d);
+		return;
+	}
+	double intpart, fractpart;
+	fractpart = modf(d, &intpart);
+	if(fractpart == 0.0)
+	{
+		printf("%d", (int)intpart);
 	}
 /*	if(d == 0.0)
 		putchar('0');
