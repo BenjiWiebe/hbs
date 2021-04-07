@@ -1,0 +1,21 @@
+# From email address
+from: no-reply@mybusiness.com
+
+# From name
+from_name: My Business, LLC
+
+# Base64-encoded password for SMTP account, for From address
+password: cGFzc3dvcmQ=
+
+# SMTP server. Uses port 587, STARTTLS, LOGIN
+smtp_server: smtp.mybusiness.com
+
+# To email address
+to: updates@supplier.com
+
+# To email address for reports
+status_to: me@mybusiness.com
+
+# Dealer ID
+dealer_id: 12345
+
