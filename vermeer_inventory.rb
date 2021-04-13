@@ -15,7 +15,7 @@ to_addr = cfg["to"]
 status_to_addr = cfg["status_to"]
 dealer_id = cfg["dealer_id"]
 vendor_id = cfg["vendor_id"]
-if [from_addr,from_name,password,smtp_server,to_addr,status_to_addr,dealer_id].contains?(nil)
+if [from_addr,from_name,password,smtp_server,to_addr,status_to_addr,dealer_id].include?(nil)
 	raise "Make sure all configuration fields are populated!"
 end
 
