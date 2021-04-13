@@ -15,3 +15,6 @@ Also, prevent nonsensical combinations of options.
 
 
 TODO: Sort results before displaying!!
+
+
+Open ticket lock file is not stored in /mdbase. Possibly /tmp?
