@@ -10,7 +10,7 @@ require 'base64'
 
 require_relative 'lib.rb'
 
-MONTH='01'
+MONTH='07'
 YEAR='2021'
 SEARCH_TERM=nil
 #SEARCH_TERM=/searchterm/
