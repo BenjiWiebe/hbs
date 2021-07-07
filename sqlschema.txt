@@ -1,4 +1,4 @@
-CREATE TABLE inventory_part_ids (
+CREATE TABLE inventory_parts (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	partno TEXT NOT NULL,
 	vendor INTEGER NOT NULL,
@@ -8,21 +8,15 @@ CREATE TABLE inventory_part_ids (
 
 CREATE TABLE IF NOT EXISTS inventory_changes (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	partno TEXT NOT NULL,
-	vendor INTEGER NOT NULL,
+	part_id INTEGER,
 	onhand INTEGER NOT NULL,
-	type INTEGER NOT NULL,
 	t TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	UNIQUE(partno,vendor,type,t)
+	FOREIGN KEY(part_id) REFERENCES inventory_parts(id)
 );
 
 CREATE TABLE IF NOT EXISTS inventory_current (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	partno TEXT NOT NULL,
-	vendor INTEGER NOT NULL,
-	onhand INTEGER NOT NULL,
-	type INTEGER NOT NULL,
-	UNIQUE(partno,vendor,type)
+	partno TEXT NOT NULL PRIMARY KEY,
+	onhand INTEGER NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_partid ON inventory_changes(partno);
