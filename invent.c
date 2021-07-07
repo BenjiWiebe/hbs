@@ -15,6 +15,8 @@
 
 #include "normalize.h"
 #include "json_stringify.h"
+#include "invent_entry.h"
+#include "update_db.h"
 
 #define INVENT_FIRST_ENTRY_OFFSET	2048
 #define INVENT_ENTRY_SIZE		2048
@@ -25,39 +27,6 @@
 // Maximum number of -f <partno> to store from the command line
 #define MAX_PART_NUMBERS	64
 
-#define MONTH_HIST_LEN	48
-#define YEAR_HIST_LEN	9
-
-// If something goes wrong on an architecture other than x86/x86_64 or with a non-GCC compiler, refactor the code to just copy the double in a loop rather than doing fancy un-portable packed struct memcpy's.
-struct padded_double {
-	unsigned char padding[6];
-	double value;
-} __attribute__((packed));
-struct invent_entry {
-	char part_number[21]; // length 20, offset 0
-	char status[2]; // length 1, offset 52. A=Active, O=Obsolete
-	int price; // length 8, offset 188. price in cents
-	int cost; // length 8, offset 180, manufacturer cost in cents
-	double on_hand; //length 8, offset 458.
-	char vendor[4]; // length 3, offset 30
-	char supplier[4]; // length 3, offset 53
-	char mfrid[6]; // length 6, offset 36
-	char desc[11]; //length 10, offset 58
-	char bin_location[13]; // length 12, offset 73
-	char bin_alt1[13]; // length 12, offset 85
-	char bin_alt2[13]; // length 12, offset 97
-	char entry_date[9]; // length 8, offset 148
-	char ext_desc[61]; // length 60, offset 1556
-	// offset starts at 298, length sizeof(double). 
-	// offset increments by 14
-	struct padded_double month_history[MONTH_HIST_LEN]; // 48 months of sales history
-	// offset starts at 970
-	// offset increments by 14
-	struct padded_double year_history[YEAR_HIST_LEN]; // 9 years of sale history
-	bool has_comments;
-	char note1[1];
-	char note2[1];
-};
 
 char record[INVENT_ENTRY_SIZE];
 
@@ -72,6 +41,7 @@ void print_usage(char *argv0)
 	printf("     --search-extdesc   Check extended description against regex.\n");
 	printf("     --match-vendor <v> Return parts that have a vendor of <v>.\n");
 	printf("  -j,--json             Print information as JSON.\n");
+	printf("     --update-db        Update database of on-hand quantities.\n");
 }
 
 void print_entry(struct invent_entry *entry)
@@ -169,11 +139,12 @@ int main(int argc, char *argv[])
 		{"search-desc",no_argument,		&search_desc, 1},
 		{"search-extdesc",no_argument,	&search_ext_desc, 1},
 		{"match-vendor",required_argument, 0, 'v'},
+		{"update-db",no_argument, 0, 10},
 		{0,0,0,0}
 	};
 	int option_index = 0;
 	int c;
-	int print_all_flag = 0, print_as_json = 0;
+	int print_all_flag = 0, print_as_json = 0, do_update_db = 0;
 	pcre2_code *regex = NULL;
 	int errorcode = 0;
 	PCRE2_SIZE erroroffset = 0;
@@ -209,19 +180,33 @@ int main(int argc, char *argv[])
 			case 'v':
 				match_vendor = optarg;
 				break;
+			case 10:
+				do_update_db = true;
+				break;
 		}
 	}
+
+	// If we were supplied with a non-option argument, that would be the INVENT file.
 	if(optind < argc)
 	{
 		filename = argv[optind++];
 	}
 	
-	// If >1 files supplied, print usage information.
-	// *OR* if we have no pattern or part number to find, and we aren't printing all
-	if(optind > argc || (!pattern_to_find && !to_find && !print_all_flag && !match_vendor))
+	// If >1 files supplied, print usage information. The only file we may be supplied
+	//  is the INVENT file, if not using the default of 'INVENT'.
+	// *OR* if we have no pattern or part number to find, and we aren't printing all.
+	// **IF --update-db is supplied, no other options are valid!
+	if(optind > argc || (!pattern_to_find && !to_find && !print_all_flag && !match_vendor && !do_update_db))
 	{
 		print_usage(argv[0]);
-		return 0;
+		return 1;
+	}
+
+	if(do_update_db && (pattern_to_find || to_find || print_all_flag || match_vendor))
+	{
+		printf("If using --update-db, no other options may be specified.\n");
+		print_usage(argv[0]);
+		return 1;
 	}
 	
 	if(pattern_to_find)
@@ -255,6 +240,16 @@ int main(int argc, char *argv[])
 	{
 		printf("[");
 	}
+
+	if(do_update_db)
+	{
+		if(update_db_init() != 0)
+		{
+			fprintf(stderr, "Failed to initialize database\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	while(1)
 	{
 		struct invent_entry entry = {0};
@@ -275,6 +270,10 @@ int main(int argc, char *argv[])
 			// blank entries in DB?
 			continue;
 		}
+
+
+		// *** We've got a record. Let's copy it to a nice little struct. ***
+
 		#define entry_copy(field, record) do{memcpy((field), record, sizeof(field)-1);(field)[sizeof(field)-1]='\0';}while(0)
 		#define entry_copy_nonull(field, record) do{memcpy((field), record, sizeof(field));}while(0)
 		//record+offset in bytes
@@ -287,7 +286,7 @@ int main(int argc, char *argv[])
 		entry_copy(entry.bin_alt2, record+97); //12
 		entry_copy(entry.entry_date, record+148); //8
 		entry_copy(entry.ext_desc, record+1556); //60
-		// If you've got a wierd bug with the month_history/year_history arrays getting corrupted, check the comment at the definition of struct padded_double. Packed structs aren't portable.
+		// If you've got a weird bug with the month_history/year_history arrays getting corrupted, check the comment at the definition of struct padded_double. Packed structs aren't portable.
 		entry_copy_nonull(entry.month_history, record+298);
 		entry_copy_nonull(entry.year_history, record+970);
 		memcpy(&entry.on_hand, record+1112, sizeof(entry.on_hand));
@@ -302,8 +301,17 @@ int main(int argc, char *argv[])
 			entry.has_comments = true;
 		}
 
+
+		// *** At this point, we have the record from the database safely read into the 'entry' variable. ***
+		// This section does various matching logic or other handling of the record.
+
+		// If we are updating the database, NOTHING ELSE HAPPENS. No printing or searching happens.
 		bool i_match = false;
-		if(print_all_flag)
+		if(do_update_db)
+		{
+			update_db_record(&entry);
+		}
+		else if(print_all_flag)
 		{
 			i_match = true;
 		}
@@ -349,11 +357,13 @@ int main(int argc, char *argv[])
 			}
 			found_some_results = true; // Don't set this to true too soon, or we will print a leading comma in our JSON array!!
 		}
-	}
-	if(print_as_json)
+	} // end per-part while loop
+	fclose(fp);
+	if(do_update_db)
+		update_db_finalize();
+	else if(print_as_json)
 		printf("]\n");
 	else if(!found_some_results)
 		printf("No matches found.\n");
-	fclose(fp);
 	return 0;
 }
