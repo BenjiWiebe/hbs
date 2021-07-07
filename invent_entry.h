@@ -3,6 +3,9 @@
 
 #include <stdbool.h>
 
+#define INVENT_FIRST_ENTRY_OFFSET	2048
+#define INVENT_ENTRY_SIZE			2048
+
 #define MONTH_HIST_LEN	48
 #define YEAR_HIST_LEN	9
 

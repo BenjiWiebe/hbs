@@ -18,9 +18,6 @@
 #include "invent_entry.h"
 #include "update_db.h"
 
-#define INVENT_FIRST_ENTRY_OFFSET	2048
-#define INVENT_ENTRY_SIZE		2048
-
 #define INVDESC_FIRST_ENTRY_OFFSET	512
 #define INVDESC_ENTRY_SIZE		512
 
