@@ -1,7 +1,10 @@
 hbs.config
 vermeer_inventory.config
 INVENT
+TRANSACT
+*.IDX
 invent
 *.o
 *.db
 vendupd
+transact
