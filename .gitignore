@@ -3,4 +3,5 @@ vermeer_inventory.config
 INVENT
 invent
 *.o
+*.db
 vendupd
