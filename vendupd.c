@@ -8,6 +8,12 @@
 #include <fcntl.h>
 #include <stdlib.h>
 
+// THIS PROGRAM DOESN'T ACTUALLY WORK
+// HBS uses Part#/Vendor/PartType as a unique ID, and copies all three to various places.
+// The only way to actually change the vendor would involve finding all past references to the Part/Vendor/Type and updating all the files.
+// Also, INVENT.IDX (and probably multiple other *.IDX files would have to be updated.
+// As of August 2021 I have not yet figured out the *.IDX format.
+
 int main()
 {
 	int fd = open("INVENT", O_RDWR);
