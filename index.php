@@ -61,16 +61,18 @@ isset($_REQUEST["search"]) && $rq=$_REQUEST["search"];
 if(strlen($rq))
 {
 	try {
+		$starttime = microtime(true);
 		if($rq[0] == '/') {
 			$rq = substr($rq, 1);
 			$j = find_results($rq, $search_by, true);
 		} else {
 			$j = find_results($rq, $search_by);
 		}
+		$endtime = microtime(true);
 		$c = count($j);
 		if($c) {
 			if($c > 1)
-				print '<a>' . $c . ' results found.</a>';
+				print '<a>Found ' . $c . ' results (' . number_format($endtime-$starttime, 2, '.', ',') . ' seconds)</a>';
 			print_results_as_table($j);
 		} else {
 			echo "No results found.";
