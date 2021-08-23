@@ -250,7 +250,7 @@ class SalesTaxEntry
 			$log.warn "Invoice ##{posh_entry.invno} has unknown status of #{posh_entry.status}"
 		end
 		begin
-			tax=invlines.find {|e| /SALES[[:space:]]TAX/ =~ e }
+			tax=invlines.last(7).find {|e| /SALES[[:space:]]TAX/ =~ e }
 			tax = tax[tax.index('X')+1..tax.length] #get substring from after the X of TAX, until end of string
 			tax.gsub!(/[[:space:]]/,'') #Remove whitespace
 			taxable = invlines.find {|e| /^[[:space:]]*TAXABLE/ =~ e }
@@ -274,7 +274,7 @@ class SalesTaxEntry
 			end
 
 		rescue Exception => e
-			$log.error "Fatal error finding tax entry in invoice"
+			$log.error "Fatal error finding tax entry in invoice ##{@invno}"
 			binding.pry if $DEBUG
 			raise e unless $DEBUG
 		end
