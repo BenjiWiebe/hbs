@@ -1,6 +1,7 @@
 require 'yaml'
 require 'httparty'
 require 'nokogiri'
+require 'pry'
 class HBSConfig
 	attr_reader :loc, :cfgfile, :user, :password, :ip
 	def initialize(cfgfile)
@@ -250,10 +251,14 @@ class SalesTaxEntry
 			$log.warn "Invoice ##{posh_entry.invno} has unknown status of #{posh_entry.status}"
 		end
 		begin
-			tax=invlines.last(7).find {|e| /SALES[[:space:]]TAX/ =~ e }
+			# Only check last 7 lines for the totals, in case a comment
+			# includes the wrong words. For some reason, every other line
+			# is blank, so use the last 7*2 lines.
+			totals = invlines.last(14)
+			tax = totals.find {|e| /SALES[[:space:]]TAX/ =~ e }
 			tax = tax[tax.index('X')+1..tax.length] #get substring from after the X of TAX, until end of string
 			tax.gsub!(/[[:space:]]/,'') #Remove whitespace
-			taxable = invlines.find {|e| /^[[:space:]]*TAXABLE/ =~ e }
+			taxable = totals.find {|e| /^[[:space:]]*TAXABLE/ =~ e }
 			taxable = taxable[taxable.index('E')+1..taxable.length] # Get substr from after text
 			taxable.gsub!(/[[:space:]]/,'') #Remove whitespace
 			@taxamount = @taxable = 0
@@ -262,7 +267,7 @@ class SalesTaxEntry
 			@amount = BigDecimal(posh_entry.amtdtl)
 
 			# Find INTERNAL amounts and subtract from total
-			internal=invlines.find {|e| /^[[:space:]]+INTERNAL/ =~ e }
+			internal = totals.find {|e| /^[[:space:]]+INTERNAL/ =~ e }
 			if internal =~ /^[[:space:]]+.*Amt:[[:space:]]*([0-9\.]+)/
 				internal_amt = BigDecimal($1)
 				$log.info "Found INTERNAL invoice, amount = #{internal_amt}"
