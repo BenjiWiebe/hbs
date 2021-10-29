@@ -20,7 +20,7 @@ if [from_addr,from_name,password,smtp_server,to_addr,status_to_addr,dealer_id].i
 end
 
 
-cmd = "/home/benji/invent -j --match-vendor #{vendor_id}"
+cmd = "/home/benji/invent --print json --match-vendor #{vendor_id}"
 results = JSON.parse(`#{cmd}`)
 file = Tempfile.new('vermeer')
 stocked_parts = results.count
