@@ -24,7 +24,7 @@ print '<input type="hidden" name="match" value="' . $search_by . '" />';
 ?>
 </form>
 <?php
-$EXEPATH="/home/benji/invent --search-desc --search-extdesc";
+$EXEPATH="/home/benji/hbs/invent";
 $FILEPATH="/home/benji/INVENT";
 require('text.php');
 require('table.php');
@@ -34,17 +34,17 @@ function find_results($part, $search_by, $is_regex = false) {
 	global $FILEPATH;
 	if($is_regex)
 	{
-		$opt = '--regex';
+		$opt = '--match-regex-all';
 	}
 	else
 	{
-		$opt = '--find';
+		$opt = '--match-partno';
 	}
 	if($search_by == "vendor")
 	{
 		$opt = '--match-vendor';
 	}
-	$cmd = "${EXEPATH} --json ${opt} '${part}' ${FILEPATH}";
+	$cmd = "${EXEPATH} --print json ${opt} '${part}' ${FILEPATH}";
 	//print $cmd;
 	$txt = shell_exec($cmd);
 	$j = json_decode($txt);
