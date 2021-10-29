@@ -1,12 +1,17 @@
-How to select parts:
-(only one may be specified, for now.)
+General options
+--help				Print help message.
+--file <file>		Read from this file.
+(future) --type <t>	Type of database. For now, the only supported type is INVENT.
 
---match-all			All parts match.
---match-regex		Check regex against part number.
---match-regex-all	Check regex against part number, description, extended description (and hopefully notes as well).
---match-partno		Match part number.
---match-vendor		Match vendor.
---match-bin			Match primary bin location.
+How to select parts (type INVENT only):
+(only one of each may be specified for now.)
+
+--match-all					All parts match.
+--match-regex <regex>		Check regex against part number.
+--match-regex-all <regex>	Check regex against part number, description, extended description (and hopefully notes as well).
+--match-partno <partno>		Match part number (fuzzy match - ignore whitespace and dashes)
+--match-vendor <vendor>		Match vendor.
+--match-bin <bin>			Match primary bin location.
 
 
 And then let's act on whatever parts matched;
@@ -14,3 +19,6 @@ multiple actions *shall* be run.
 	
 	--update-qty-db <filename>		If the on-hand quantity has changed, update the DB to match.
 	--print	(text|json)				Print the parts as text or JSON.
+
+
+On error, an appropriate error message is printed as plain text on stderr and EXIT_FAILURE is returned.
