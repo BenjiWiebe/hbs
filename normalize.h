@@ -1,3 +1,4 @@
+// In-place modifies the string so it contains no dashes or spaces
 void normalize_part_number(char *a)
 {
 	int i2 = 0;
