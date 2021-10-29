@@ -17,7 +17,7 @@ Also, prevent nonsensical combinations of options.
 TODO: Sort results before displaying!!
 
 
-Open ticket lock file is not stored in /mdbase. Possibly /tmp?
+Open ticket lock file is not stored in /mdbase. Possibly /tmp? Nope, not there either. Check 'strings' output for the command that is called when closing a ticket?? Actually, I think it might be in RAM...possibly shared memory between processes. Or some other IPC going on.
 
 
 When updating part quantity, the files touched are INVENT, TRANSACT, and TRANSACT.IDX. There are no lock files/locks created in /mdbase or /tmp while a part is open in PMM; apparently, no locks are used, because when a part gets updated whilst one instance of PMM is open, PMM will complain that the part was updated by another user. TL;DR When updating part quantity, don't worry about other users. Just do it.
