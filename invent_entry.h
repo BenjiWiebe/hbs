@@ -2,6 +2,7 @@
 #define _INVENT_ENTRY_INCLUDED_
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #define INVENT_FIRST_ENTRY_OFFSET	2048
 #define INVENT_ENTRY_SIZE			2048
@@ -38,6 +39,18 @@ struct invent_entry {
 	char bin_alt2[13]; // length 12, offset 97
 	char entry_date[9]; // length 8, offset 148
 	char ext_desc[61]; // length 60, offset 1556
+	char new_partno[21]; // length 20, offset 1176
+	char new_vendor[4]; // length 3, offset 1206
+	uint8_t new_type; // length 1, offset 1211
+	char old_partno[21]; // length 20, offset 1220
+	char old_vendor[4]; // length 3, offset 1250
+	uint8_t old_type; // length 1, offset 1255
+	char core_partno[21]; // length 20, offset 1264
+	char core_vendor[4]; // length 3, offset 1294
+	uint8_t core_type; // length 1, offset 1299
+	char reman_partno[21]; // length 20, offset 1308
+	char reman_vendor[4]; // length 3, offset 1338
+	uint8_t reman_type; // length 1, offset 1343
 	// offset starts at 298, length sizeof(double). 
 	// offset increments by 14
 	struct padded_double month_history[MONTH_HIST_LEN]; // 48 months of sales history

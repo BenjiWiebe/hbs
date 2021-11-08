@@ -7,8 +7,8 @@
 #include <sys/types.h>
 #include <getopt.h>
 #include <time.h>
-#include <stdbool.h>
 #include <math.h>
+#include <stdbool.h>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
@@ -17,6 +17,7 @@
 #include "json_stringify.h"
 #include "invent_entry.h"
 #include "update_db.h"
+#include "print_entry_json.h"
 
 #define INVDESC_FIRST_ENTRY_OFFSET	512
 #define INVDESC_ENTRY_SIZE		512
@@ -62,68 +63,6 @@ void print_value_null(char *value)
 		printf("\"%s\"", value);
 	else
 		printf("null");
-}
-
-void print_double_two(double d)
-{
-	if(d == 0.0 || d == 1.0 || d == 2.0 || d == 3.0 || d == 4.0 ||
-		d == 5.0 || d == 6.0 || d == 7.0 || d == 8.0 || d == 9.0)
-	{
-		putchar('0' + (int)d);
-		return;
-	}
-	double intpart, fractpart;
-	fractpart = modf(d, &intpart);
-	if(fractpart == 0.0)
-	{
-		printf("%d", (int)intpart);
-	}
-/*	if(d == 0.0)
-		putchar('0');
-	else if(d == 1.0)
-		putchar('1');
-	else if(d == 2.0)
-		putchar('2');
-	else if(d == 3.0)
-		putchar('3');*/
-//	if(d - (int)d == 0)
-//		printf("%d", (int)d);
-	else
-		printf("%0.2f", d);
-}
-
-void print_entry_json(struct invent_entry *entry)
-{
-#define put(s) fputs((s),stdout)
-	put("{");
-	put("\"partnumber\":"); put(json_stringify(entry->part_number));
-	printf(",\"price\":%d", (int)entry->price);
-	put(",\"onhand\":"); print_double_two(entry->on_hand);
-	put(",\"bin\":"); put(json_stringify(entry->bin_location));
-	put(",\"binalt1\":"); put(json_stringify(entry->bin_alt1));
-	put(",\"binalt2\":"); put(json_stringify(entry->bin_alt2));
-	put(",\"desc\":"); put(json_stringify(entry->desc));
-	put(",\"extdesc\":"); put(json_stringify(entry->ext_desc));
-	put(",\"note1\":"); put(json_stringify(entry->note1));
-	put(",\"note2\":"); put(json_stringify(entry->note2));
-	put(",\"histmonth\":[");
-	for(int i = 0; i < MONTH_HIST_LEN - 1; i++) // Subtract 1 so we have an element left...
-	{
-		print_double_two(entry->month_history[i].value);
-		putchar(',');
-	}
-	print_double_two(entry->month_history[MONTH_HIST_LEN-1].value);
-	putchar(']'); // ...which we print without a comma
-	put(",\"histyear\":[");
-	for(int i = 0; i < YEAR_HIST_LEN - 1; i++)
-	{
-		print_double_two(entry->year_history[i].value);
-		putchar(',');
-	}
-	print_double_two(entry->year_history[YEAR_HIST_LEN-1].value);
-	putchar(']');
-	put("}\n");
-#undef put
 }
 
 int main(int argc, char *argv[])
@@ -324,6 +263,19 @@ int main(int argc, char *argv[])
 		entry_copy(entry.bin_alt2, record+97); //12
 		entry_copy(entry.entry_date, record+148); //8
 		entry_copy(entry.ext_desc, record+1556); //60
+		entry_copy(entry.new_partno, record+1176);
+		entry_copy(entry.new_vendor, record+1206);
+		entry_copy(entry.old_partno, record+1220);
+		entry_copy(entry.old_vendor, record+1250);
+		entry_copy(entry.core_partno, record+1264);
+		entry_copy(entry.core_vendor, record+1294);
+		entry_copy(entry.reman_partno, record+1308);
+		entry_copy(entry.reman_vendor, record+1338);
+		entry.type = *(record+35);
+		entry.new_type = *(record+1211);
+		entry.old_type = *(record+1255);
+		entry.core_type = *(record+1299);
+		entry.reman_type = *(record+1343);
 		// If you've got a weird bug with the month_history/year_history arrays getting corrupted, check the comment at the definition of struct padded_double. Packed structs aren't portable.
 		entry_copy_nonull(entry.month_history, record+298);
 		entry_copy_nonull(entry.year_history, record+970);
@@ -404,7 +356,7 @@ int main(int argc, char *argv[])
 				{
 					putchar(','); // do some comma separating of records
 				}
-				print_entry_json(&entry);
+				print_entry_json(&entry, true);
 			}
 			else
 			{
