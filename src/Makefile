@@ -1,7 +1,7 @@
 CFLAGS=-g
 CC=gcc -std=c99
 
-all: invent vendupd
+all: invent
 
 invent: LDLIBS=-lpcre2-8 -lm -lsqlite3
 invent: invent.o json_stringify.o update_db.o print_entry_json.o
