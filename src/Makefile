@@ -20,5 +20,5 @@ clean:
 install: invent
 	@echo 'Installing to ~/'
 	-cp invent ~/
-	-cp vermeer_inventory.rb ~/
+	-cp ../vermeer_inventory.rb ~/
 
