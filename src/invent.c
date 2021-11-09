@@ -41,6 +41,7 @@ void print_usage(char *argv0)
 	printf("\n Action options\n");
 	printf("     --update-qty-db     Update the record(s) in the quantity database.\n");
 	printf("  -p,--print (text|json) Print the record(s) as JSON or plain text.\n");
+	printf("     --print-history     Include the history when printing JSON.\n");
 	printf("\n Other\n");
 	printf("  -t,--type <type>       The type of the database. Currently only INVENT is supported.\n");
 	printf("  -h,--help              Print this message.\n");
@@ -81,6 +82,7 @@ int main(int argc, char *argv[])
 		{"match-bin",		required_argument,	0,	5},
 		{"update-qty-db",	no_argument,		0,	6},
 		{"print",			required_argument,	0,	'p'},
+		{"print-history",	no_argument,		0,	7},
 		{"type",			required_argument,	0,	't'},
 		{"help",			no_argument,		0,	'h'},
 		{0,0,0,0}
@@ -111,6 +113,7 @@ int main(int argc, char *argv[])
 
 	struct {
 		bool print;
+		bool include_history;
 		enum {PRINT_JSON, PRINT_PLAINTEXT} print_as;
 		bool update_qty_db;
 	} action_options = {0};
@@ -149,6 +152,7 @@ int main(int argc, char *argv[])
 			case 4: match_options.vendor = optarg; break;
 			case 5: match_options.bin = optarg; break;
 			case 6: action_options.update_qty_db = true; break;
+			case 7: action_options.include_history = true; break;
 			case 't': fprintf(stderr, "--type not supported yet.\n"); break;
 		}
 	}
@@ -168,6 +172,14 @@ int main(int argc, char *argv[])
 	// Do we have leftover arguments? That's not OK!
 	if(optind < argc)
 	{
+		print_usage(argv[0]);
+		return 1;
+	}
+
+	// Do we have _some_ action specified?
+	if(!action_options.print && !action_options.update_qty_db)
+	{
+		fprintf(stderr, "No actions specified.\n");
 		print_usage(argv[0]);
 		return 1;
 	}
@@ -356,7 +368,7 @@ int main(int argc, char *argv[])
 				{
 					putchar(','); // do some comma separating of records
 				}
-				print_entry_json(&entry, true);
+				print_entry_json(&entry, action_options.include_history);
 			}
 			else
 			{
