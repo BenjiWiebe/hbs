@@ -10,10 +10,14 @@ require 'base64'
 
 require_relative 'lib.rb'
 
-MONTH='07'
+MONTH='12'
+#SAVE_TO='hbsoutput.txt' #set this to nil to not write output
+SAVE_TO=nil
 YEAR='2021'
 SEARCH_TERM=nil
 #SEARCH_TERM=/searchterm/
+
+do_save = SAVE_TO.to_s.empty? ? false : true
 
 $DEBUG = $ARGV.delete("--debug") ? true : false
 
@@ -43,9 +47,14 @@ puts "Getting all sales tax amounts"
 
 stes = []
 totalsales = BigDecimal("0")
+file = File.open(SAVE_TO, "w") if do_save
 posh_list.each_with_progress do |poshitem|
 	begin
 		inv = bot.get_ticket_preview(poshitem)
+		if do_save
+			file.write(inv.join("\n"))
+			file.write("\n\n\n")
+		end
 	rescue HBSErrException => e
 		$log.error "HBS Error on invoice ##{poshitem.invno}: #{e.message}"
 		$log.error "Not using taxable amounts"
@@ -62,6 +71,8 @@ posh_list.each_with_progress do |poshitem|
 	stes << ste if ste.taxamount != 0
 	totalsales += ste.amount
 end
+
+file.close if do_save
 
 puts "Found #{stes.count} taxable invoices."
 
