@@ -327,6 +327,11 @@ int main(int argc, char *argv[])
 			if(!strcasecmp(tmp, match_options.fuzzy_partno))
 				i_match = true;
 		}
+		else if(match_options.bin)
+		{
+			if(!strcmp(entry.bin_location, match_options.bin))
+				i_match = true;
+		}
 		else if(match_options.regex_partno)
 		{
 			ret = pcre2_match(match_options.regex_partno, (PCRE2_SPTR)entry.part_number, PCRE2_ZERO_TERMINATED, 0, 0, match_options.matchdata_partno, NULL);
