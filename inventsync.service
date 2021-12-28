@@ -1,0 +1,6 @@
+[Unit]
+Description=Sync INVENT from server
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/rsync -ta --inplace hbsserver:/mdbase/loc1/INVENT /path/to/INVENT

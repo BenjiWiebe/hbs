@@ -1,0 +1,9 @@
+[Unit]
+Description=Sync INVENT file from server
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+
+[Install]
+WantedBy=timers.target
