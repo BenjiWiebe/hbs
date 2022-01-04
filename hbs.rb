@@ -10,10 +10,12 @@ require 'base64'
 
 require_relative 'lib.rb'
 
-MONTH='12'
+puts "WARNING: Total sales for the month *does* include WARRANTY tickets!"
+
+MONTH='01'
 #SAVE_TO='hbsoutput.txt' #set this to nil to not write output
 SAVE_TO=nil
-YEAR='2021'
+YEAR='2022'
 SEARCH_TERM=nil
 #SEARCH_TERM=/searchterm/
 
