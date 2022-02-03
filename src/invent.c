@@ -35,10 +35,10 @@ void print_usage(char *argv0)
 	printf("  -a,--match-all         Match all records.\n");
 	printf("  -r,--match-regex       Match records against regex.\n");
 	printf("     --match-regex-all   Match records against regex, searching all relevant fields.\n");
-	printf("     --match-partno      Match records with matching part number.\n");
+	printf("  -f,--match-partno      Match records with matching part number.\n");
 	printf("     --match-vendor      Match records by vendor number.\n");
 	printf("     --match-bin         Match records by bin location.\n");
-	printf("\n Action options\n");
+	printf("\n Action options - defaults to printing as plain text\n");
 	printf("     --update-qty-db     Update the record(s) in the quantity database.\n");
 	printf("  -p,--print (text|json) Print the record(s) as JSON or plain text.\n");
 	printf("     --print-history     Include the history when printing JSON.\n");
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 		{"match-all",		no_argument,		0,	'a'},
 		{"match-regex",		required_argument,	0,	'r'},
 		{"match-regex-all",	required_argument,	0,	2},
-		{"match-partno",	required_argument,	0,	3},
+		{"match-partno",	required_argument,	0,	'f'},
 		{"match-vendor",	required_argument,	0,	4},
 		{"match-bin",		required_argument,	0,	5},
 		{"update-qty-db",	no_argument,		0,	6},
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
 
 	while(1)
 	{
-		c = getopt_long(argc, argv, "ahp:r:t:", long_options, &option_index);
+		c = getopt_long(argc, argv, "ahp:r:t:f:", long_options, &option_index);
 		if(c == -1)
 			break;
 		switch(c)
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
 			case 'a': match_options.match_all = true; break;
 			case 'r': match_options.pattern_partno = optarg; break;
 			case 2: match_options.pattern_all = optarg; break;
-			case 3: match_options.fuzzy_partno = optarg; normalize_part_number(match_options.fuzzy_partno); break;
+			case 'f': match_options.fuzzy_partno = optarg; normalize_part_number(match_options.fuzzy_partno); break;
 			case 4: match_options.vendor = optarg; break;
 			case 5: match_options.bin = optarg; break;
 			case 6: action_options.update_qty_db = true; break;
