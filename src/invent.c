@@ -117,6 +117,10 @@ int main(int argc, char *argv[])
 		enum {PRINT_JSON, PRINT_PLAINTEXT} print_as;
 		bool update_qty_db;
 	} action_options = {0};
+
+	// By default, print as plaintext.
+	action_options.print_as = PRINT_PLAINTEXT;
+
 	while(1)
 	{
 		c = getopt_long(argc, argv, "ahp:r:t:", long_options, &option_index);
@@ -134,14 +138,13 @@ int main(int argc, char *argv[])
 				{
 					action_options.print_as = PRINT_JSON;
 				}
-				else if(!strcmp(optarg, "text"))
-				{
-					action_options.print_as = PRINT_PLAINTEXT;
-				}
 				else
 				{
-					fprintf(stderr, "Unknown print type %s.\n", optarg);
-					return 1;
+					if(strcmp(optarg, "text"))
+					{
+						fprintf(stderr, "Unknown printing type '%s', assuming text.\n", optarg);
+					}
+					action_options.print_as = PRINT_PLAINTEXT;
 				}
 				break;
 
@@ -176,12 +179,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	// Do we have _some_ action specified?
+	// If no action was specified, print!
 	if(!action_options.print && !action_options.update_qty_db)
 	{
-		fprintf(stderr, "No actions specified.\n");
-		print_usage(argv[0]);
-		return 1;
+		action_options.print = true;
 	}
 
 	// Compile our regexes and report on errors
