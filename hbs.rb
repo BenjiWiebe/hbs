@@ -10,8 +10,6 @@ require 'base64'
 
 require_relative 'lib.rb'
 
-puts "WARNING: Total sales for the month *does* include WARRANTY tickets!"
-
 MONTH='01'
 #SAVE_TO='hbsoutput.txt' #set this to nil to not write output
 SAVE_TO=nil
@@ -51,8 +49,24 @@ stes = []
 totalsales = BigDecimal("0")
 file = File.open(SAVE_TO, "w") if do_save
 posh_list.each_with_progress do |poshitem|
+	invtype = :normal
 	begin
 		inv = bot.get_ticket_preview(poshitem)
+		piktikline = inv[10,1].first
+
+		# Check if its a INTERNAL or WARRANTY ticket
+		if piktikline.match?(/PIK[[:space:]]TIK[[:space:]]NO/)
+		parts = piktikline.split(/[[:space:]]+/)
+			if parts[5] != "T/S:"
+				puts "WARNING: T/S not found on invoice ##{poshitem.invno}"
+			else
+				if parts[6] == "WARRANTY"
+					invtype = :warranty
+				elsif parts[6] == "INTERNAL"
+					invtype = :internal
+				end
+			end
+		end
 		if do_save
 			file.write(inv.join("\n"))
 			file.write("\n\n\n")
@@ -69,9 +83,13 @@ posh_list.each_with_progress do |poshitem|
 			puts "Found invoice ##{poshitem.invno} matching #{SEARCH_TERM.inspect}"
 		end
 	end
-	ste = SalesTaxEntry.new(poshitem, inv)
-	stes << ste if ste.taxamount != 0
-	totalsales += ste.amount
+	if invtype == :normal
+		ste = SalesTaxEntry.new(poshitem, inv)
+		stes << ste if ste.taxamount != 0
+		totalsales += ste.amount
+	else
+		puts "Found ticket of type #{invtype.to_s.upcase}: ##{poshitem.invno}"
+	end
 end
 
 file.close if do_save
