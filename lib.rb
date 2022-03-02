@@ -258,12 +258,21 @@ class SalesTaxEntry
 			tax = totals.find {|e| /SALES[[:space:]]TAX/ =~ e }
 			tax = tax[tax.index('X')+1..tax.length] #get substring from after the X of TAX, until end of string
 			tax.gsub!(/[[:space:]]/,'') #Remove whitespace
-			taxable = totals.find {|e| /^[[:space:]]*TAXABLE/ =~ e }
-			taxable = taxable[taxable.index('E')+1..taxable.length] # Get substr from after text
-			taxable.gsub!(/[[:space:]]/,'') #Remove whitespace
+			taxable_lines = totals.select {|e| /^[[:space:]]*TAXABLE/ =~ e } # this will result in two lines: TAXABLE and TAXABLE LABOR
+			if taxable_lines.length != 2
+				raise "Less than 2 '.*TAXABLE.*' lines found at the end of invoice ##{posh_entry.invno}"
+			end
+			taxable_parts = taxable_lines[0]
+			taxable_labor = taxable_lines[1]
+			taxable_parts.gsub!(/.*[[:space:]]/,'') # Get rid of everything before the last space. Keep the dollar amount like 12.34
+			taxable_labor.gsub!(/.*[[:space:]]/,'') # Same for the taxable labor line
+			taxable_parts_amt = BigDecimal(0) # IDK if this is necessary, but let's make sure that these variables are definitely a valid BigDecimal...
+			taxable_labor_amt = BigDecimal(0) # ...so when we add them up as @taxable, there's no errors. The following lines are conditionals, after all.
+			taxable_parts_amt = BigDecimal(taxable_parts) unless taxable_parts.nil?
+			taxable_labor_amt = BigDecimal(taxable_labor) unless taxable_labor.nil?
 			@taxamount = @taxable = 0
 			@taxamount = BigDecimal(tax) unless tax.nil?
-			@taxable = BigDecimal(taxable) unless taxable.nil?
+			@taxable = taxable_parts_amt + taxable_labor_amt
 			@amount = BigDecimal(posh_entry.amtdtl)
 
 			# Find INTERNAL amounts and subtract from total
