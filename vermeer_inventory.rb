@@ -39,7 +39,7 @@ end
 
 status_msg = <<END
 From: #{from_name} <#{from_addr}>
-To: <#{to_addr}>
+To: <#{status_to_addr}>
 Subject: Vermeer inventory update report
 
 Sent parts inventory list to Vermeer. #{stocked_parts} stocked parts.
