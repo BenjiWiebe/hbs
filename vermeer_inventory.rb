@@ -70,7 +70,6 @@ END
 message += Base64.encode64(File.read(file))
 message += "--" + boundary
 
-password='S2U7NjBUMEUkdSF7Q0ZxW2tDc0o='
 smtp = Net::SMTP.new smtp_server, 587
 smtp.enable_starttls
 smtp.start('localhost',from_addr,Base64.decode64(password), :login) do
