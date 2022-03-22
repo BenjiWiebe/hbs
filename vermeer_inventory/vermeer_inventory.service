@@ -1,0 +1,6 @@
+[Unit]
+Description=Generate and email inventory report to Vermeer
+
+[Service]
+Type=oneshot
+ExecStart=/path/to/vermeer_inventory.rb

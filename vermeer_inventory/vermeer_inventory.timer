@@ -1,0 +1,8 @@
+[Unit]
+Description=Generate and email inventory report to Vermeer - daily
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+
+[Install]
+WantedBy=timers.target
