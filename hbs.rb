@@ -10,14 +10,13 @@ require 'base64'
 
 require_relative 'lib.rb'
 
-MONTH='01'
-#SAVE_TO='hbsoutput.txt' #set this to nil to not write output
-SAVE_TO=nil
-YEAR='2022'
+MONTH='04'
+YEAR='2023'
+SAVE_LOG_TO="#{MONTH}-#{YEAR}-hbs_log.txt"
 SEARCH_TERM=nil
 #SEARCH_TERM=/searchterm/
 
-do_save = SAVE_TO.to_s.empty? ? false : true
+do_save = SAVE_LOG_TO.to_s.empty? ? false : true
 
 $DEBUG = $ARGV.delete("--debug") ? true : false
 
@@ -47,7 +46,7 @@ puts "Getting all sales tax amounts"
 
 stes = []
 totalsales = BigDecimal("0")
-file = File.open(SAVE_TO, "w") if do_save
+file = File.open(SAVE_LOG_TO, "w") if do_save
 posh_list.each_with_progress do |poshitem|
 	invtype = :normal
 	begin
