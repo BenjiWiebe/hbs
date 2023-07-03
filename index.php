@@ -1,9 +1,33 @@
 <!DOCTYPE html>
-<html><head><meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="stylesheet" href="index.css" /><title>Inventory lookup</title></head>
+<html><head><meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="stylesheet" href="index.css" /><title>Inventory lookup</title>
+<script type="text/javascript">
+function updatePartial()
+{
+	let updated = false;
+	let textinput = document.getElementById('search');
+	if(document.getElementById('partialm').checked)
+	{
+		if(textinput.value[0] != '/') {
+			updated = true;
+			textinput.value = '/' + textinput.value;
+		}
+	}
+	else
+	{
+		if(textinput.value[0] == '/') {
+			updated = true;
+			textinput.value = textinput.value.substr(1);
+		}
+	}
+	textinput.focus();
+}
+</script>
+</head>
 <body>
 <p>Search by:
 <a href="/?match=vendor">Vendor</a>
 <a href="/">Part</a>
+</p>
 <form action="/" method="get">
 <?php
 if(isset($_REQUEST["match"]) && $_REQUEST["match"] == "vendor")
@@ -17,9 +41,11 @@ else
 	$input_name = "search";
 	$label_text = "Part number: ";
 	$search_by = "part";
+	?><input type="checkbox" id="partialm" onclick="updatePartial()"></input><label style="text-decoration: underline;user-select:none;padding:" for="partialm">Partial match</label><p></p><?php
 }
 print '<label for="search">' . $label_text . '</label>';
-print '<input type="search" id="search" name="search" autofocus></input>';
+if($search_by == "vendor") print '<input type="search" id="search" name="search" autofocus></input>';
+if($search_by == "part") print '<input type="search" id="search" oninput="updatePartial()" name="search" autofocus></input>';
 print '<input type="hidden" name="match" value="' . $search_by . '" />';
 ?>
 </form>
@@ -61,13 +87,20 @@ isset($_REQUEST["search"]) && $rq=$_REQUEST["search"];
 if(strlen($rq))
 {
 	try {
+		// start the timer on the search
 		$starttime = microtime(true);
+
+		// check if its a regex match of plain match (starts with '/')
+		// and get the results as an array
 		if($rq[0] == '/') {
 			$rq = substr($rq, 1);
 			$j = find_results($rq, $search_by, true);
 		} else {
 			$j = find_results($rq, $search_by);
 		}
+
+		// calculate the time it took, and the number of results
+		// then print that plus the results-as-a-table
 		$endtime = microtime(true);
 		$c = count($j);
 		if($c) {
@@ -77,6 +110,7 @@ if(strlen($rq))
 		} else {
 			echo "No results found.";
 		}
+
 	} catch(Exception $e) {
 		echo "Part lookup failed: " . $e->getMessage();
 	}
