@@ -28,3 +28,7 @@ ALT (alternate) parts #1, #2, etc are stored in INVDESC.
 
 Lock files for CEM entries are stored in /mdbase/netview/<ip of lock holder>/<numeric filename>
 Searching all IP folders in /mdbase/netview/ for text found in the CEM record will help find the lock. Delete it and the unit can then be accessed in CEM.
+
+To remove an open tick lock, use NVMON
+
+loc1/*.pik are open tickets
