@@ -10,7 +10,7 @@ require 'base64'
 
 require_relative 'lib.rb'
 
-MONTH='04'
+MONTH='06'
 YEAR='2023'
 SAVE_LOG_TO="#{MONTH}-#{YEAR}-hbs_log.txt"
 SEARCH_TERM=nil
@@ -37,86 +37,100 @@ if $config.user.nil? || $config.password.nil?
 	exit 1
 end
 
-bot = Automate.new($config.user, Base64.decode64($config.password), $config.ip, $config.loc)
-bot.login
-bot.start_posh
-posh_list = bot.request_posh(MONTH, YEAR)
-puts "Found #{posh_list.count} invoices"
-puts "Getting all sales tax amounts"
+def get_customer_tickets
+	custid = '70707'
+	bot = Automate.new($config.user, Base64.decode64($config.password), $config.ip, $config.loc)
+	bot.login
+	bot.start_posh
+	posh_list = bot.request_posh_customer(custid)
+	puts "Found #{posh_list.count} invoices for customer ID #{custid}"
+end
 
-stes = []
-totalsales = BigDecimal("0")
-file = File.open(SAVE_LOG_TO, "w") if do_save
-posh_list.each_with_progress do |poshitem|
-	invtype = :normal
-	begin
-		inv = bot.get_ticket_preview(poshitem)
-		piktikline = inv[10,1].first
+def get_sales_tax_report(do_save)
+	bot = Automate.new($config.user, Base64.decode64($config.password), $config.ip, $config.loc)
+	bot.login
+	bot.start_posh
+	posh_list = bot.request_posh_month(MONTH, YEAR)
+	puts "Found #{posh_list.count} invoices"
+	puts "Getting all sales tax amounts"
 
-		# Check if its a INTERNAL or WARRANTY ticket
-		if piktikline.match?(/PIK[[:space:]]TIK[[:space:]]NO/)
-		parts = piktikline.split(/[[:space:]]+/)
-			if parts[5] != "T/S:"
-				puts "WARNING: T/S not found on invoice ##{poshitem.invno}"
-			else
-				if parts[6] == "WARRANTY"
-					invtype = :warranty
-				elsif parts[6] == "INTERNAL"
-					invtype = :internal
+	stes = []
+	totalsales = BigDecimal("0")
+	file = File.open(SAVE_LOG_TO, "w") if do_save
+	posh_list.each_with_progress do |poshitem|
+		invtype = :normal
+		begin
+			inv = bot.get_ticket_preview(poshitem)
+			piktikline = inv[10,1].first
+
+			# Check if its a INTERNAL or WARRANTY ticket
+			if piktikline.match?(/PIK[[:space:]]TIK[[:space:]]NO/)
+				parts = piktikline.split(/[[:space:]]+/)
+				if parts[5] != "T/S:"
+					puts "WARNING: T/S not found on invoice ##{poshitem.invno}"
+				else
+					if parts[6] == "WARRANTY"
+						invtype = :warranty
+					elsif parts[6] == "INTERNAL"
+						invtype = :internal
+					end
 				end
 			end
+			if do_save
+				file.write(inv.join("\n"))
+				file.write("\n\n\n")
+			end
+		rescue HBSErrException => e
+			$log.error "HBS Error on invoice ##{poshitem.invno}: #{e.message}"
+			$log.error "Not using taxable amounts"
+			totalsales += SalesTaxEntry.new(poshitem).amount
+			next
 		end
-		if do_save
-			file.write(inv.join("\n"))
-			file.write("\n\n\n")
+		if SEARCH_TERM
+			results = inv.select {|line| line =~ SEARCH_TERM }
+			if results.length > 0
+				puts "Found invoice ##{poshitem.invno} matching #{SEARCH_TERM.inspect}"
+			end
 		end
-	rescue HBSErrException => e
-		$log.error "HBS Error on invoice ##{poshitem.invno}: #{e.message}"
-		$log.error "Not using taxable amounts"
-		totalsales += SalesTaxEntry.new(poshitem).amount
-		next
-	end
-	if SEARCH_TERM
-		results = inv.select {|line| line =~ SEARCH_TERM }
-		if results.length > 0
-			puts "Found invoice ##{poshitem.invno} matching #{SEARCH_TERM.inspect}"
+		if invtype == :normal
+			ste = SalesTaxEntry.new(poshitem, inv)
+			stes << ste if ste.taxamount != 0
+			totalsales += ste.amount
+		else
+			puts "Found ticket of type #{invtype.to_s.upcase}: ##{poshitem.invno}"
 		end
 	end
-	if invtype == :normal
-		ste = SalesTaxEntry.new(poshitem, inv)
-		stes << ste if ste.taxamount != 0
-		totalsales += ste.amount
-	else
-		puts "Found ticket of type #{invtype.to_s.upcase}: ##{poshitem.invno}"
+
+	file.close if do_save
+
+	puts "Found #{stes.count} taxable invoices."
+
+	total_tax = stes.map {|t| t.taxamount }.sum
+	total_amount = stes.map {|t| t.amount }.sum
+	taxable_amount = stes.map {|t| t.taxable }.sum
+
+	tax_str = bd_to_usd(total_tax)
+	amt_str = bd_to_usd(total_amount)
+	taxamt_str = bd_to_usd(taxable_amount)
+	totalsales_str = bd_to_usd(totalsales)
+
+	rows = []
+	stes.each do |s|
+		a = bd_to_usd(s.amount)
+		t = bd_to_usd(s.taxable)
+		ta = bd_to_usd(s.taxamount)
+		rows << [s.invno, a, t, ta]
 	end
+
+	table = Terminal::Table.new :headings => ['Invoice#', 'Amount', 'Taxable', 'Tax'], :rows => rows
+	puts table
+
+	puts
+	puts
+	puts "Total tax: #{tax_str}"
+	puts "Total taxable: #{taxamt_str}"
+	puts "Total sales for the month: #{totalsales_str}"
 end
 
-file.close if do_save
-
-puts "Found #{stes.count} taxable invoices."
-
-total_tax = stes.map {|t| t.taxamount }.sum
-total_amount = stes.map {|t| t.amount }.sum
-taxable_amount = stes.map {|t| t.taxable }.sum
-
-tax_str = bd_to_usd(total_tax)
-amt_str = bd_to_usd(total_amount)
-taxamt_str = bd_to_usd(taxable_amount)
-totalsales_str = bd_to_usd(totalsales)
-
-rows = []
-stes.each do |s|
-	a = bd_to_usd(s.amount)
-	t = bd_to_usd(s.taxable)
-	ta = bd_to_usd(s.taxamount)
-	rows << [s.invno, a, t, ta]
-end
-
-table = Terminal::Table.new :headings => ['Invoice#', 'Amount', 'Taxable', 'Tax'], :rows => rows
-puts table
-
-puts
-puts
-puts "Total tax: #{tax_str}"
-puts "Total taxable: #{taxamt_str}"
-puts "Total sales for the month: #{totalsales_str}"
+get_sales_tax_report(do_save)
+#get_customer_tickets

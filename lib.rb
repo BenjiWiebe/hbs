@@ -57,6 +57,7 @@ class Automate
 		end
 	end
 
+	# Gets ready to use POSH
 	def start_posh
 		@response = HTTParty.get(
 			"#{@hbsurl}/netview/in/POSH?#{@loc}+#{@user}+",
@@ -70,7 +71,7 @@ class Automate
 
 	# returns array of POSH_entry's for the month
 	# use month code 00 to get a year's worth
-	def request_posh(month = '00', year)
+	def request_posh_month(month = '00', year)
 		data = {
 			custno: '',
 			curloc: @loc,
@@ -87,11 +88,41 @@ class Automate
 			ptno: '',
 			pono: '',
 		}
+		return request_posh_custom_search(data)
+	end
+
+	# returns array of POSH_entry's for a customer
+	# TODO could accept year as well
+	def request_posh_customer(customer)
+			data = {
+			custno: customer,
+			curloc: @loc,
+			startPos: 0,
+			lastPage: '0',
+			searchMode: '',
+			fileAction: 'getCST',
+			srchType: '',
+			custname: '',
+			month: '',
+			invdate: '',
+			year: '',
+			invno: '',
+			ptno: '',
+			pono: '',
+		}
+		#custno=07325&curloc=loc1&startPos=0&lastPage=0&searchMode=&fileAction=getCST&srchType=&custname=&month=&invdate=&year=&invno=&ptno=&pono=
+		return request_posh_custom_search(data)
+	end
+
+
+	# Returns list of POSH_entry's for whatever search data is passed in
+	# intended to be used by helper functions
+	def request_posh_custom_search(data)
 		invoices = []
 		page_count = 0
 		loop do
 			page_count += 1
-			next_data, page_invoices = request_posh_page(data, month)
+			next_data, page_invoices = request_posh_page(data)
 			next_data[:searchMode] = 'X' #after the first page use searchMode = X
 			invoices += page_invoices
 			$log.info "Got page of #{page_invoices.count} invoices"
@@ -117,7 +148,7 @@ class Automate
 	end
 	
 	# returns [next startPos, array of invoice numbers]
-	def request_posh_page(posh_post_data, month = '00')
+	def request_posh_page(posh_post_data)
 		@response = nil
 		@response = HTTParty.post(
 			"#{@hbsurl}/netview/in/POSHdata",
