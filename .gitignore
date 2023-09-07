@@ -8,3 +8,5 @@ invent
 *.db
 vendupd
 transact
+DealerPricing.csv
+*-hbs_log.txt
