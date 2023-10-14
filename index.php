@@ -40,8 +40,12 @@ else
 <?php
 print '<p></p>';
 print '<label for="search">' . $label_text . '</label>';
-if($search_by == "vendor") print '<input type="search" id="search" name="search" autofocus></input>';
-if($search_by == "part") print '<input type="search" id="search" name="search" autofocus></input>';
+$search_value = $_REQUEST['search'];
+// on this input field, we preload it with whatever search term this page is a result of
+// also, we select it so they can just type to replace it, however we only want to select it
+//   right after page load before they choose a different search term, hence the onfocus=null
+if($search_by == "vendor") print '<input type="search" id="search" name="search" value="' . $search_value . '" autofocus onfocus="this.select();this.onfocus=null"></input>';
+if($search_by == "part") print '<input type="search" id="search" name="search" value="' . $search_value . '" autofocus onfocus="this.select();this.onfocus=null"></input>';
 print '<input type="hidden" name="match" value="' . $search_by . '" />';
 ?>
 </form>
@@ -103,7 +107,7 @@ if(strlen($rq))
 			return $i->bin != 'SP ORD';
 		}
 		function check_stock_out($i) {
-			if($i->bin == 'SP ORD')
+			if($i->bin == 'SP ORD') // special order stuff won't be stocked and that's fine
 				return false;
 			if($i->onhand > 0)
 				return false;
